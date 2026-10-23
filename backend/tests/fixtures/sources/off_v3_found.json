@@ -1,0 +1,46 @@
+{
+ "captured_from": "https://world.openfoodfacts.org/api/v3/product/3017620422003.json?fields=code,product_name,generic_name,brands,quantity,product_quantity,product_quantity_unit,categories_tags,countries_tags,image_front_url,last_modified_t",
+ "captured_at": "2026-10-22T10:52:59Z",
+ "status": 200,
+ "content_type": "application/json; charset=utf-8",
+ "json": {
+  "code": "3017620422003",
+  "errors": [],
+  "product": {
+   "brands": "Nutella, Ferrero",
+   "categories_tags": [
+    "en:breakfasts",
+    "en:spreads",
+    "en:sweet-spreads",
+    "en:confectionary-based-spreads",
+    "en:Petit-déjeuners",
+    "en:Produits à tartiner",
+    "en:Produits à tartiner sucrés",
+    "en:Pâtes à tartiner",
+    "fr:Goûter",
+    "fr:Nutella",
+    "fr:Nuttela"
+   ],
+   "code": "3017620422003",
+   "countries_tags": [
+    "en:france",
+    "en:germany"
+   ],
+   "generic_name": "Hazelnut And Cocoa Spread",
+   "image_front_url": "https://images.openfoodfacts.org/images/products/301/762/042/2003/front_en.879.400.jpg",
+   "last_modified_t": 1792487392,
+   "product_name": "Nutella",
+   "product_quantity": 400,
+   "product_quantity_unit": "g",
+   "quantity": "400 g e"
+  },
+  "result": {
+   "id": "product_found",
+   "lc_name": "Product found",
+   "name": "Product found"
+  },
+  "status": "success",
+  "warnings": []
+ },
+ "text": null
+}

@@ -1,0 +1,33 @@
+{
+ "captured_from": "https://prices.openfoodfacts.org/api/v1/locations/osm/countries?size=300",
+ "captured_at": "2026-10-22T10:52:52Z",
+ "status": 200,
+ "content_type": "application/json",
+ "json": [
+  {
+   "id": "en:germany",
+   "name": "Germany",
+   "country_code_2": "DE",
+   "osm_name": "Deutschland",
+   "location_count": 1110,
+   "price_count": 17349
+  },
+  {
+   "id": "en:france",
+   "name": "France",
+   "country_code_2": "FR",
+   "osm_name": "France",
+   "location_count": 2595,
+   "price_count": 215545
+  },
+  {
+   "id": "en:philippines",
+   "name": "Philippines",
+   "country_code_2": "PH",
+   "osm_name": "Philippines",
+   "location_count": 16,
+   "price_count": 26
+  }
+ ],
+ "text": null
+}

@@ -1,0 +1,11 @@
+{
+ "captured_from": "https://api.frankfurter.dev/v2/rate/usd/xyz",
+ "captured_at": "2026-10-22T10:53:15Z",
+ "status": 422,
+ "content_type": "application/json; charset=utf-8",
+ "json": {
+  "status": 422,
+  "message": "invalid currency: XYZ"
+ },
+ "text": null
+}

@@ -1,0 +1,30 @@
+{
+ "url": "https://geocoding-api.open-meteo.com/v1/search?name=Quezon%20City&count=8&language=en&format=json",
+ "captured": "2026-10-22",
+ "status": 200,
+ "json": {
+  "results": [
+   {
+    "id": 1692192,
+    "name": "Quezon City",
+    "latitude": 14.6488,
+    "longitude": 121.0509,
+    "elevation": 49.0,
+    "feature_code": "PPLA2",
+    "country_code": "PH",
+    "admin1_id": 7521311,
+    "admin2_id": 11395836,
+    "admin3_id": 1692193,
+    "timezone": "Asia/Manila",
+    "population": 3084270,
+    "country_id": 1694008,
+    "country": "Philippines",
+    "admin1": "National Capital Region",
+    "admin2": "Eastern Manila District",
+    "admin3": "Quezon City"
+   }
+  ],
+  "generationtime_ms": 0.21374226
+ },
+ "text": null
+}

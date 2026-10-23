@@ -1,0 +1,18 @@
+{
+ "captured_from": "https://api.worldbank.org/v2/country/XX/indicator/FP.CPI.TOTL.ZG?format=json",
+ "captured_at": "2026-10-22T10:53:09Z",
+ "status": 200,
+ "content_type": "application/json;charset=utf-8",
+ "json": [
+  {
+   "page": 0,
+   "pages": 0,
+   "per_page": 0,
+   "total": 0,
+   "sourceid": null,
+   "lastupdated": null
+  },
+  null
+ ],
+ "text": null
+}

@@ -1,0 +1,1335 @@
+{
+ "spec": {
+  "industry": "retail",
+  "business": {
+   "name": "Maple Street Grocer",
+   "type": "grocery",
+   "currency": "USD",
+   "sample_data": true
+  },
+  "products": [
+   {
+    "id": "produce",
+    "name": "Fresh produce",
+    "category": "Perishable",
+    "price": 3.2,
+    "unit_cost": 1.85,
+    "avg_daily_demand": 165,
+    "demand_cv": 0.35,
+    "starting_inventory": 700,
+    "shelf_life_days": 6,
+    "reorder_point": 420,
+    "order_quantity": 600,
+    "lead_time_days": 2,
+    "price_elasticity": -1.2
+   },
+   {
+    "id": "dairy",
+    "name": "Dairy & eggs",
+    "category": "Perishable",
+    "price": 4.1,
+    "unit_cost": 2.65,
+    "avg_daily_demand": 110,
+    "demand_cv": 0.3,
+    "starting_inventory": 520,
+    "shelf_life_days": 10,
+    "reorder_point": 300,
+    "order_quantity": 450,
+    "lead_time_days": 2,
+    "price_elasticity": -1.2
+   },
+   {
+    "id": "bakery",
+    "name": "Bakery",
+    "category": "Perishable",
+    "price": 3.6,
+    "unit_cost": 1.5,
+    "avg_daily_demand": 70,
+    "demand_cv": 0.4,
+    "starting_inventory": 150,
+    "shelf_life_days": 3,
+    "reorder_point": 90,
+    "order_quantity": 140,
+    "lead_time_days": 1,
+    "price_elasticity": -1.2
+   },
+   {
+    "id": "pantry",
+    "name": "Pantry staples",
+    "category": "Shelf-stable",
+    "price": 3.9,
+    "unit_cost": 2.55,
+    "avg_daily_demand": 140,
+    "demand_cv": 0.25,
+    "starting_inventory": 1500,
+    "shelf_life_days": null,
+    "reorder_point": 800,
+    "order_quantity": 1200,
+    "lead_time_days": 5,
+    "price_elasticity": -0.9
+   },
+   {
+    "id": "beverages",
+    "name": "Beverages",
+    "category": "Shelf-stable",
+    "price": 2.4,
+    "unit_cost": 1.35,
+    "avg_daily_demand": 130,
+    "demand_cv": 0.3,
+    "starting_inventory": 1100,
+    "shelf_life_days": null,
+    "reorder_point": 600,
+    "order_quantity": 900,
+    "lead_time_days": 4,
+    "price_elasticity": -0.9
+   },
+   {
+    "id": "household",
+    "name": "Household goods",
+    "category": "Shelf-stable",
+    "price": 6.5,
+    "unit_cost": 4.2,
+    "avg_daily_demand": 30,
+    "demand_cv": 0.45,
+    "starting_inventory": 300,
+    "shelf_life_days": null,
+    "reorder_point": 220,
+    "order_quantity": 200,
+    "lead_time_days": 7,
+    "price_elasticity": -0.9
+   }
+  ],
+  "expenses": [
+   {
+    "id": "rent",
+    "name": "Rent",
+    "category": "rent",
+    "amount": 6500,
+    "frequency": "monthly"
+   },
+   {
+    "id": "utilities",
+    "name": "Utilities & refrigeration",
+    "category": "utilities",
+    "amount": 1900,
+    "frequency": "monthly"
+   },
+   {
+    "id": "insurance",
+    "name": "Insurance",
+    "category": "insurance",
+    "amount": 450,
+    "frequency": "monthly"
+   },
+   {
+    "id": "software",
+    "name": "POS & software",
+    "category": "other",
+    "amount": 220,
+    "frequency": "monthly"
+   },
+   {
+    "id": "card-fees",
+    "name": "Card processing (est.)",
+    "category": "fees",
+    "amount": 160,
+    "frequency": "weekly"
+   }
+  ],
+  "staff": [
+   {
+    "id": "clerks",
+    "role": "Store clerk",
+    "count": 3,
+    "hourly_wage": 17.0,
+    "hours_per_week": 36
+   },
+   {
+    "id": "manager",
+    "role": "Store manager",
+    "count": 1,
+    "hourly_wage": 26.0,
+    "hours_per_week": 45
+   }
+  ],
+  "operations": {
+   "open_days_per_week": 7,
+   "units_per_labor_hour": 40.0,
+   "storage_capacity_units": 6000,
+   "delivery_minutes_per_order": 12.0
+  },
+  "finance": {
+   "starting_cash": 38000.0,
+   "min_cash_buffer": 8000.0
+  },
+  "goals": {
+   "target_monthly_operating_profit": 4500.0,
+   "max_investment_budget": 15000.0,
+   "risk_tolerance": "medium",
+   "max_waste_rate": null,
+   "min_fill_rate": null
+  },
+  "uncertainty": {
+   "demand_level_pct": 10.0,
+   "supplier_cost_pct": 3.0
+  },
+  "provenance": {
+   "products.produce.price": "default",
+   "products.produce.unit_cost": "default",
+   "products.produce.avg_daily_demand": "default",
+   "products.produce.demand_cv": "default",
+   "products.produce.starting_inventory": "default",
+   "products.produce.shelf_life_days": "default",
+   "products.produce.reorder_point": "default",
+   "products.produce.order_quantity": "default",
+   "products.produce.lead_time_days": "default",
+   "products.produce.price_elasticity": "default",
+   "products.dairy.price": "default",
+   "products.dairy.unit_cost": "default",
+   "products.dairy.avg_daily_demand": "default",
+   "products.dairy.demand_cv": "default",
+   "products.dairy.starting_inventory": "default",
+   "products.dairy.shelf_life_days": "default",
+   "products.dairy.reorder_point": "default",
+   "products.dairy.order_quantity": "default",
+   "products.dairy.lead_time_days": "default",
+   "products.dairy.price_elasticity": "default",
+   "products.bakery.price": "default",
+   "products.bakery.unit_cost": "default",
+   "products.bakery.avg_daily_demand": "default",
+   "products.bakery.demand_cv": "default",
+   "products.bakery.starting_inventory": "default",
+   "products.bakery.shelf_life_days": "default",
+   "products.bakery.reorder_point": "default",
+   "products.bakery.order_quantity": "default",
+   "products.bakery.lead_time_days": "default",
+   "products.bakery.price_elasticity": "default",
+   "products.pantry.price": "default",
+   "products.pantry.unit_cost": "default",
+   "products.pantry.avg_daily_demand": "default",
+   "products.pantry.demand_cv": "default",
+   "products.pantry.starting_inventory": "default",
+   "products.pantry.shelf_life_days": "default",
+   "products.pantry.reorder_point": "default",
+   "products.pantry.order_quantity": "default",
+   "products.pantry.lead_time_days": "default",
+   "products.pantry.price_elasticity": "default",
+   "products.beverages.price": "default",
+   "products.beverages.unit_cost": "default",
+   "products.beverages.avg_daily_demand": "default",
+   "products.beverages.demand_cv": "default",
+   "products.beverages.starting_inventory": "default",
+   "products.beverages.shelf_life_days": "default",
+   "products.beverages.reorder_point": "default",
+   "products.beverages.order_quantity": "default",
+   "products.beverages.lead_time_days": "default",
+   "products.beverages.price_elasticity": "default",
+   "products.household.price": "default",
+   "products.household.unit_cost": "default",
+   "products.household.avg_daily_demand": "default",
+   "products.household.demand_cv": "default",
+   "products.household.starting_inventory": "default",
+   "products.household.shelf_life_days": "default",
+   "products.household.reorder_point": "default",
+   "products.household.order_quantity": "default",
+   "products.household.lead_time_days": "default",
+   "products.household.price_elasticity": "default",
+   "expenses.rent.amount": "default",
+   "expenses.utilities.amount": "default",
+   "expenses.insurance.amount": "default",
+   "expenses.software.amount": "default",
+   "expenses.card-fees.amount": "default",
+   "staff.clerks.count": "default",
+   "staff.clerks.hourly_wage": "default",
+   "staff.clerks.hours_per_week": "default",
+   "staff.manager.count": "default",
+   "staff.manager.hourly_wage": "default",
+   "staff.manager.hours_per_week": "default",
+   "operations.units_per_labor_hour": "default",
+   "operations.storage_capacity_units": "default",
+   "operations.delivery_minutes_per_order": "default",
+   "operations.open_days_per_week": "default",
+   "finance.starting_cash": "default",
+   "finance.min_cash_buffer": "default",
+   "uncertainty.demand_level_pct": "default",
+   "uncertainty.supplier_cost_pct": "default"
+  }
+ },
+ "criteria": {
+  "min_cash_floor": 8000.0,
+  "target_monthly_operating_profit": 4500.0,
+  "max_waste_rate": null,
+  "min_fill_rate": null,
+  "max_investment": 15000.0,
+  "risk_tolerance": "medium"
+ },
+ "scenarios": [
+  {
+   "id": "baseline",
+   "kind": "baseline",
+   "name": "Baseline World",
+   "description": "The business continues operating exactly as the model describes today.",
+   "decision": "Keep current operations",
+   "levers": {},
+   "assumptions": [
+    "No change to prices, stock policy, staffing or costs."
+   ],
+   "color_index": 0
+  },
+  {
+   "id": "inventory",
+   "kind": "inventory",
+   "name": "Inventory Expansion World",
+   "description": "Order 40% more per purchase and reorder earlier to respond to expected demand.",
+   "decision": "Buy more inventory per order",
+   "levers": {
+    "order_quantity_change_pct": 40,
+    "reorder_point_change_pct": 30
+   },
+   "assumptions": [
+    "Suppliers can deliver the larger orders at the same unit price.",
+    "Customer demand does not change because of extra stock."
+   ],
+   "color_index": 1
+  },
+  {
+   "id": "delivery",
+   "kind": "delivery",
+   "name": "Delivery Service World",
+   "description": "Offer local delivery with a per-order fee, driver cost, monthly software cost and a one-time setup cost.",
+   "decision": "Start a local delivery service",
+   "levers": {
+    "delivery": {
+     "enabled": true,
+     "orders_per_day": 25,
+     "units_per_order": 6,
+     "fee_per_order": 4.99,
+     "cost_per_order": 6.5,
+     "fixed_monthly_cost": 600,
+     "setup_cost": 3500,
+     "cannibalization_pct": 35
+    }
+   },
+   "assumptions": [
+    "25 delivery orders a day on average once launched (no ramp-up period modelled).",
+    "35% of delivered units would otherwise have been bought in store.",
+    "Each delivery order takes about 12 minutes of staff time to pick and pack."
+   ],
+   "color_index": 2
+  },
+  {
+   "id": "price",
+   "kind": "price",
+   "name": "Price Adjustment World",
+   "description": "Raise shelf-stable prices by 4%; demand responds through each product's price elasticity.",
+   "decision": "Raise prices on shelf-stable goods",
+   "levers": {
+    "price_change_pct": 4,
+    "price_products": [
+     "pantry",
+     "beverages",
+     "household"
+    ]
+   },
+   "assumptions": [
+    "Price elasticity values in the model hold for a 4% change.",
+    "Competitors do not change their prices."
+   ],
+   "color_index": 3
+  },
+  {
+   "id": "stress",
+   "kind": "stress",
+   "name": "Economic Stress World",
+   "description": "Demand falls 15%, supplier prices rise 8%, deliveries arrive a day later and a $4,000 repair bill lands mid-period.",
+   "decision": "Test resilience to a downturn",
+   "levers": {
+    "demand_change_pct": -15,
+    "supplier_cost_change_pct": 8,
+    "lead_time_change_days": 1,
+    "unexpected_expense": 4000,
+    "unexpected_expense_day": 45
+   },
+   "assumptions": [
+    "All adverse conditions happen together for the whole period.",
+    "The business does not react by cutting costs."
+   ],
+   "color_index": 4
+  },
+  {
+   "id": "lean",
+   "kind": "inventory",
+   "name": "Lean Ordering World",
+   "description": "Order perishables in batches 25% smaller, accepting more frequent orders.",
+   "decision": "Order perishables in smaller batches",
+   "levers": {
+    "order_quantity_change_pct": -25,
+    "inventory_products": [
+     "produce",
+     "dairy",
+     "bakery"
+    ]
+   },
+   "assumptions": [
+    "Suppliers accept smaller orders at the same unit price.",
+    "Ordering more often does not add delivery charges."
+   ],
+   "color_index": 5
+  }
+ ],
+ "goals": [
+  {
+   "id": "profit",
+   "label": "Increase profitability",
+   "short": "Profit",
+   "description": "Find a change that raises monthly operating profit without breaking the cash or budget limits.",
+   "scenario_ids": [
+    "baseline",
+    "price",
+    "delivery",
+    "inventory"
+   ],
+   "metrics": [
+    "avg_monthly_operating_profit",
+    "revenue",
+    "min_cash"
+   ]
+  },
+  {
+   "id": "waste",
+   "label": "Reduce inventory waste",
+   "short": "Waste",
+   "description": "Cut the share of stock that expires on the shelf while still serving customers.",
+   "scenario_ids": [
+    "baseline",
+    "lean",
+    "inventory"
+   ],
+   "metrics": [
+    "waste_rate",
+    "waste_cost",
+    "fill_rate",
+    "avg_monthly_operating_profit"
+   ]
+  },
+  {
+   "id": "cash",
+   "label": "Protect available cash",
+   "short": "Cash",
+   "description": "Keep the lowest cash balance safely above the buffer, even in a bad run.",
+   "scenario_ids": [
+    "baseline",
+    "lean",
+    "inventory",
+    "delivery"
+   ],
+   "metrics": [
+    "min_cash",
+    "ending_cash",
+    "avg_monthly_operating_profit"
+   ]
+  }
+ ],
+ "parity_cases": [
+  {
+   "scenario": "baseline",
+   "extra": {},
+   "budget": null,
+   "expected": {
+    "revenue": 205560.0,
+    "sales_revenue": 205560.0,
+    "delivery_revenue": 0.0,
+    "cogs": 122422.5,
+    "waste_cost": 15.0,
+    "gross_profit": 83122.5,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 67915.71428571438,
+    "operating_profit": 15206.785714285623,
+    "avg_monthly_operating_profit": 5068.928571428541,
+    "one_time_costs": 0.0,
+    "ending_cash": 56608.0,
+    "min_cash": 30825.5,
+    "units_sold": 58050.0,
+    "units_demanded": 58050.0,
+    "waste_units": 10.0,
+    "fill_rate": 1.0,
+    "waste_rate": 0.0001722356183258698,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 2210.0,
+    "ending_inventory_value": 5455.5,
+    "purchases_paid": 121590.0,
+    "labor_utilization": 0.7377450980392157
+   },
+   "outcome": "passed",
+   "violations": []
+  },
+  {
+   "scenario": "inventory",
+   "extra": {},
+   "budget": null,
+   "expected": {
+    "revenue": 205560.0,
+    "sales_revenue": 205560.0,
+    "delivery_revenue": 0.0,
+    "cogs": 122422.5,
+    "waste_cost": 4641.146163812119,
+    "gross_profit": 78496.35383618787,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 67915.71428571438,
+    "operating_profit": 10580.639550473497,
+    "avg_monthly_operating_profit": 3526.8798501578326,
+    "one_time_costs": 0.0,
+    "ending_cash": 49093.15772093377,
+    "min_cash": 28030.0,
+    "units_sold": 58050.0,
+    "units_demanded": 58050.0,
+    "waste_units": 2724.049003186717,
+    "fill_rate": 1.0,
+    "waste_rate": 0.044822568972554065,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 3503.807951311862,
+    "ending_inventory_value": 8638.986849525125,
+    "purchases_paid": 129104.84227906624,
+    "labor_utilization": 0.7377450980392157
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target"
+   ]
+  },
+  {
+   "scenario": "delivery",
+   "extra": {},
+   "budget": null,
+   "expected": {
+    "revenue": 225089.30635256195,
+    "sales_revenue": 214893.28903654462,
+    "delivery_revenue": 10196.01731601732,
+    "cogs": 127980.99667774067,
+    "waste_cost": 53.60465116278874,
+    "gross_profit": 97054.70502365849,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 16425.0,
+    "operating_expenses": 84340.71428571438,
+    "operating_profit": 12713.990737944114,
+    "avg_monthly_operating_profit": 4237.996912648038,
+    "one_time_costs": 3500.0,
+    "ending_cash": 49214.806352562024,
+    "min_cash": 26798.492292806244,
+    "units_sold": 60685.7142857144,
+    "units_demanded": 66824.99999999999,
+    "waste_units": 35.73643410852583,
+    "fill_rate": 0.90812890812891,
+    "waste_rate": 0.0005885306376064469,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 1328.549280177175,
+    "ending_inventory_value": 2603.39867109632,
+    "purchases_paid": 128587.5,
+    "labor_utilization": 1.0780228758169932
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target"
+   ]
+  },
+  {
+   "scenario": "price",
+   "extra": {},
+   "budget": null,
+   "expected": {
+    "revenue": 205932.42455898775,
+    "sales_revenue": 205932.42455898775,
+    "delivery_revenue": 0.0,
+    "cogs": 120367.01728768848,
+    "waste_cost": 15.0,
+    "gross_profit": 85550.40727129928,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 67915.71428571438,
+    "operating_profit": 17634.6929855849,
+    "avg_monthly_operating_profit": 5878.230995194967,
+    "one_time_costs": 0.0,
+    "ending_cash": 59035.42455898777,
+    "min_cash": 30833.77610131084,
+    "units_sold": 57113.56140669179,
+    "units_demanded": 57113.56140669179,
+    "waste_units": 10.0,
+    "fill_rate": 1.0,
+    "waste_rate": 0.000175059113153063,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 1746.4385933082515,
+    "ending_inventory_value": 3610.9827123116092,
+    "purchases_paid": 119535.0,
+    "labor_utilization": 0.7258440992135855
+   },
+   "outcome": "passed",
+   "violations": []
+  },
+  {
+   "scenario": "stress",
+   "extra": {},
+   "budget": null,
+   "expected": {
+    "revenue": 173550.79999999973,
+    "sales_revenue": 173550.79999999973,
+    "delivery_revenue": 0.0,
+    "cogs": 111854.7359999999,
+    "waste_cost": 0.0,
+    "gross_profit": 61696.063999999824,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 67915.71428571438,
+    "operating_profit": -6219.650285714553,
+    "avg_monthly_operating_profit": -2073.216761904851,
+    "one_time_costs": 4000.0,
+    "ending_cash": 29315.300000000094,
+    "min_cash": 21766.900000000063,
+    "units_sold": 49016.0,
+    "units_demanded": 49342.5,
+    "waste_units": 0.0,
+    "fill_rate": 0.9933829862694432,
+    "waste_rate": 0.0,
+    "stockout_rate": 0.03518518518518519,
+    "ending_inventory_units": 1054.0,
+    "ending_inventory_value": 3006.5040000000004,
+    "purchases_paid": 112873.50000000001,
+    "labor_utilization": 0.6270833333333323
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target"
+   ]
+  },
+  {
+   "scenario": "lean",
+   "extra": {},
+   "budget": null,
+   "expected": {
+    "revenue": 205560.0,
+    "sales_revenue": 205560.0,
+    "delivery_revenue": 0.0,
+    "cogs": 122422.5,
+    "waste_cost": 0.0,
+    "gross_profit": 83137.5,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 67915.71428571438,
+    "operating_profit": 15221.785714285623,
+    "avg_monthly_operating_profit": 5073.928571428541,
+    "one_time_costs": 0.0,
+    "ending_cash": 57183.625,
+    "min_cash": 30896.5,
+    "units_sold": 58050.0,
+    "units_demanded": 58050.0,
+    "waste_units": 0.0,
+    "fill_rate": 1.0,
+    "waste_rate": 0.0,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 2002.5,
+    "ending_inventory_value": 5014.875,
+    "purchases_paid": 121014.375,
+    "labor_utilization": 0.7377450980392157
+   },
+   "outcome": "passed",
+   "violations": []
+  },
+  {
+   "scenario": "baseline",
+   "extra": {
+    "demand_change_pct": -20
+   },
+   "budget": null,
+   "expected": {
+    "revenue": 164448.00000000006,
+    "sales_revenue": 164448.00000000006,
+    "delivery_revenue": 0.0,
+    "cogs": 97937.99999999984,
+    "waste_cost": 2674.3999999999996,
+    "gross_profit": 63835.60000000022,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 67915.71428571438,
+    "operating_profit": -4080.1142857141604,
+    "avg_monthly_operating_profit": -1360.0380952380535,
+    "one_time_costs": 0.0,
+    "ending_cash": 36990.99999999984,
+    "min_cash": 26619.299999999876,
+    "units_sold": 46440.0,
+    "units_demanded": 46440.0,
+    "waste_units": 1670.0,
+    "fill_rate": 1.0,
+    "waste_rate": 0.034712118062772815,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 2570.0,
+    "ending_inventory_value": 5598.1,
+    "purchases_paid": 100095.0,
+    "labor_utilization": 0.5901960784313725
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target"
+   ]
+  },
+  {
+   "scenario": "inventory",
+   "extra": {
+    "demand_change_pct": -20
+   },
+   "budget": null,
+   "expected": {
+    "revenue": 164246.40000000008,
+    "sales_revenue": 164246.40000000008,
+    "delivery_revenue": 0.0,
+    "cogs": 97853.99999999984,
+    "waste_cost": 8343.839263855181,
+    "gross_profit": 58048.56073614506,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 67915.71428571438,
+    "operating_profit": -9867.153549569317,
+    "avg_monthly_operating_profit": -3289.0511831897725,
+    "one_time_costs": 0.0,
+    "ending_cash": 30024.276066100272,
+    "min_cash": 19387.521889625055,
+    "units_sold": 46384.0,
+    "units_demanded": 46440.0,
+    "waste_units": 4834.719293613906,
+    "fill_rate": 0.9987941429801895,
+    "waste_rate": 0.09439359984576406,
+    "stockout_rate": 0.001851851851851852,
+    "ending_inventory_units": 4446.0,
+    "ending_inventory_value": 10130.284670044559,
+    "purchases_paid": 106860.12393389971,
+    "labor_utilization": 0.5901960784313725
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target"
+   ]
+  },
+  {
+   "scenario": "delivery",
+   "extra": {
+    "demand_change_pct": -20
+   },
+   "budget": null,
+   "expected": {
+    "revenue": 206748.52325581375,
+    "sales_revenue": 195521.02325581375,
+    "delivery_revenue": 11227.5,
+    "cogs": 116443.72674418615,
+    "waste_cost": 466.2558139534885,
+    "gross_profit": 89838.54069767412,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 16425.0,
+    "operating_expenses": 84340.71428571438,
+    "operating_profit": 5497.826411959744,
+    "avg_monthly_operating_profit": 1832.6088039865815,
+    "one_time_costs": 3500.0,
+    "ending_cash": 42229.023255813794,
+    "min_cash": 26046.94069767442,
+    "units_sold": 55214.99999999999,
+    "units_demanded": 55214.99999999999,
+    "waste_units": 310.8372093023262,
+    "fill_rate": 1.0,
+    "waste_rate": 0.00559806434130184,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 1844.162790697679,
+    "ending_inventory_value": 3588.0174418604765,
+    "purchases_paid": 117232.5,
+    "labor_utilization": 0.9304738562091517
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target"
+   ]
+  },
+  {
+   "scenario": "price",
+   "extra": {
+    "demand_change_pct": -20
+   },
+   "budget": null,
+   "expected": {
+    "revenue": 164745.93964719024,
+    "sales_revenue": 164745.93964719024,
+    "delivery_revenue": 0.0,
+    "cogs": 96293.61383015064,
+    "waste_cost": 2674.3999999999996,
+    "gross_profit": 65777.9258170396,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 67915.71428571438,
+    "operating_profit": -2137.788468674771,
+    "avg_monthly_operating_profit": -712.5961562249237,
+    "one_time_costs": 0.0,
+    "ending_cash": 37288.93964718995,
+    "min_cash": 26831.1681935573,
+    "units_sold": 45690.849125353474,
+    "units_demanded": 45690.849125353474,
+    "waste_units": 1670.0,
+    "fill_rate": 1.0,
+    "waste_rate": 0.03526119212051893,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 3319.150874646603,
+    "ending_inventory_value": 7242.486169849293,
+    "purchases_paid": 100095.0,
+    "labor_utilization": 0.5806752793708684
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target"
+   ]
+  },
+  {
+   "scenario": "stress",
+   "extra": {
+    "demand_change_pct": -20
+   },
+   "budget": null,
+   "expected": {
+    "revenue": 133614.0000000002,
+    "sales_revenue": 133614.0000000002,
+    "delivery_revenue": 0.0,
+    "cogs": 85940.59499999991,
+    "waste_cost": 2331.4770000000008,
+    "gross_profit": 45341.92800000029,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 67915.71428571438,
+    "operating_profit": -22573.786285714086,
+    "avg_monthly_operating_profit": -7524.595428571362,
+    "one_time_costs": 4000.0,
+    "ending_cash": 14042.999999999949,
+    "min_cash": 8759.199999999939,
+    "units_sold": 37732.5,
+    "units_demanded": 37732.5,
+    "waste_units": 1188.0,
+    "fill_rate": 1.0,
+    "waste_rate": 0.030523759972251128,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 1909.5,
+    "ending_inventory_value": 4524.768000000001,
+    "purchases_paid": 88209.00000000003,
+    "labor_utilization": 0.47953431372549093
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target"
+   ]
+  },
+  {
+   "scenario": "lean",
+   "extra": {
+    "demand_change_pct": -20
+   },
+   "budget": null,
+   "expected": {
+    "revenue": 164448.00000000006,
+    "sales_revenue": 164448.00000000006,
+    "delivery_revenue": 0.0,
+    "cogs": 97937.99999999984,
+    "waste_cost": 319.5,
+    "gross_profit": 66190.50000000022,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 67915.71428571438,
+    "operating_profit": -1725.214285714159,
+    "avg_monthly_operating_profit": -575.0714285713863,
+    "one_time_costs": 0.0,
+    "ending_cash": 41125.37499999979,
+    "min_cash": 28954.199999999924,
+    "units_sold": 46440.0,
+    "units_demanded": 46440.0,
+    "waste_units": 213.0,
+    "fill_rate": 1.0,
+    "waste_rate": 0.00456562278953122,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 2824.5,
+    "ending_inventory_value": 6173.625,
+    "purchases_paid": 95960.625,
+    "labor_utilization": 0.5901960784313725
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target"
+   ]
+  },
+  {
+   "scenario": "baseline",
+   "extra": {
+    "supplier_cost_change_pct": 12,
+    "staff_hours_change_pct": -25
+   },
+   "budget": null,
+   "expected": {
+    "revenue": 205560.0,
+    "sales_revenue": 205560.0,
+    "delivery_revenue": 0.0,
+    "cogs": 137113.19999999992,
+    "waste_cost": 16.8,
+    "gross_profit": 68430.00000000007,
+    "labor_cost": 28986.428571428547,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 58253.571428571464,
+    "operating_profit": 10176.428571428609,
+    "avg_monthly_operating_profit": 3392.1428571428696,
+    "one_time_costs": 0.0,
+    "ending_cash": 51035.200000000004,
+    "min_cash": 30524.000000000004,
+    "units_sold": 58050.0,
+    "units_demanded": 58050.0,
+    "waste_units": 10.0,
+    "fill_rate": 1.0,
+    "waste_rate": 0.0001722356183258698,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 2210.0,
+    "ending_inventory_value": 6110.16,
+    "purchases_paid": 136180.79999999993,
+    "labor_utilization": 0.9836601307189542
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target"
+   ]
+  },
+  {
+   "scenario": "inventory",
+   "extra": {
+    "supplier_cost_change_pct": 12,
+    "staff_hours_change_pct": -25
+   },
+   "budget": null,
+   "expected": {
+    "revenue": 205560.0,
+    "sales_revenue": 205560.0,
+    "delivery_revenue": 0.0,
+    "cogs": 137113.19999999992,
+    "waste_cost": 5198.083703469574,
+    "gross_profit": 63248.7162965305,
+    "labor_cost": 28986.428571428547,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 58253.571428571464,
+    "operating_profit": 4995.144867959039,
+    "avg_monthly_operating_profit": 1665.0482893196797,
+    "one_time_costs": 0.0,
+    "ending_cash": 42618.57664744584,
+    "min_cash": 27667.12,
+    "units_sold": 58050.0,
+    "units_demanded": 58050.0,
+    "waste_units": 2724.049003186717,
+    "fill_rate": 1.0,
+    "waste_rate": 0.044822568972554065,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 3503.807951311862,
+    "ending_inventory_value": 9675.66527146814,
+    "purchases_paid": 144597.42335255415,
+    "labor_utilization": 0.9836601307189542
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target"
+   ]
+  },
+  {
+   "scenario": "delivery",
+   "extra": {
+    "supplier_cost_change_pct": 12,
+    "staff_hours_change_pct": -25
+   },
+   "budget": null,
+   "expected": {
+    "revenue": 152126.0354374308,
+    "sales_revenue": 145235.08305647844,
+    "delivery_revenue": 6890.952380952378,
+    "cogs": 96875.10697674418,
+    "waste_cost": 4372.705116279062,
+    "gross_profit": 50878.22334440757,
+    "labor_cost": 28986.428571428547,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 16425.0,
+    "operating_expenses": 74678.57142857146,
+    "operating_profit": -23800.348084163896,
+    "avg_monthly_operating_profit": -7933.449361387965,
+    "one_time_costs": 3500.0,
+    "ending_cash": 13040.23543743084,
+    "min_cash": 8023.499741602124,
+    "units_sold": 41014.28571428569,
+    "units_demanded": 66824.99999999999,
+    "waste_units": 2286.0022148394205,
+    "fill_rate": 0.6137566137566135,
+    "waste_rate": 0.05279415736406189,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 2739.7120708748566,
+    "ending_inventory_value": 6653.547906976733,
+    "purchases_paid": 100816.79999999996,
+    "labor_utilization": 1.4373638344226576
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target"
+   ]
+  },
+  {
+   "scenario": "price",
+   "extra": {
+    "supplier_cost_change_pct": 12,
+    "staff_hours_change_pct": -25
+   },
+   "budget": null,
+   "expected": {
+    "revenue": 205932.42455898775,
+    "sales_revenue": 205932.42455898775,
+    "delivery_revenue": 0.0,
+    "cogs": 134811.05936221094,
+    "waste_cost": 16.8,
+    "gross_profit": 71104.5651967768,
+    "labor_cost": 28986.428571428547,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 58253.571428571464,
+    "operating_profit": 12850.993768205342,
+    "avg_monthly_operating_profit": 4283.664589401781,
+    "one_time_costs": 0.0,
+    "ending_cash": 53709.224558987764,
+    "min_cash": 30532.276101310836,
+    "units_sold": 57113.56140669179,
+    "units_demanded": 57113.56140669179,
+    "waste_units": 10.0,
+    "fill_rate": 1.0,
+    "waste_rate": 0.000175059113153063,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 1746.4385933082515,
+    "ending_inventory_value": 4044.3006377890024,
+    "purchases_paid": 133879.19999999992,
+    "labor_utilization": 0.9677921322847807
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target"
+   ]
+  },
+  {
+   "scenario": "stress",
+   "extra": {
+    "supplier_cost_change_pct": 12,
+    "staff_hours_change_pct": -25
+   },
+   "budget": null,
+   "expected": {
+    "revenue": 173550.79999999973,
+    "sales_revenue": 173550.79999999973,
+    "delivery_revenue": 0.0,
+    "cogs": 124283.04000000012,
+    "waste_cost": 0.0,
+    "gross_profit": 49267.7599999996,
+    "labor_cost": 28986.428571428547,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 58253.571428571464,
+    "operating_profit": -8985.811428571862,
+    "avg_monthly_operating_profit": -2995.2704761906207,
+    "one_time_costs": 4000.0,
+    "ending_cash": 25791.80000000013,
+    "min_cash": 19524.7000000001,
+    "units_sold": 49016.0,
+    "units_demanded": 49342.5,
+    "waste_units": 0.0,
+    "fill_rate": 0.9933829862694432,
+    "waste_rate": 0.0,
+    "stockout_rate": 0.03518518518518519,
+    "ending_inventory_units": 1054.0,
+    "ending_inventory_value": 3340.5599999999995,
+    "purchases_paid": 125415.0,
+    "labor_utilization": 0.8361111111111097
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target"
+   ]
+  },
+  {
+   "scenario": "lean",
+   "extra": {
+    "supplier_cost_change_pct": 12,
+    "staff_hours_change_pct": -25
+   },
+   "budget": null,
+   "expected": {
+    "revenue": 205560.0,
+    "sales_revenue": 205560.0,
+    "delivery_revenue": 0.0,
+    "cogs": 137113.19999999992,
+    "waste_cost": 0.0,
+    "gross_profit": 68446.80000000008,
+    "labor_cost": 28986.428571428547,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 58253.571428571464,
+    "operating_profit": 10193.228571428612,
+    "avg_monthly_operating_profit": 3397.7428571428704,
+    "one_time_costs": 0.0,
+    "ending_cash": 51679.89999999999,
+    "min_cash": 30877.6,
+    "units_sold": 58050.0,
+    "units_demanded": 58050.0,
+    "waste_units": 0.0,
+    "fill_rate": 1.0,
+    "waste_rate": 0.0,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 2002.5,
+    "ending_inventory_value": 5616.66,
+    "purchases_paid": 135536.10000000006,
+    "labor_utilization": 0.9836601307189542
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target"
+   ]
+  },
+  {
+   "scenario": "baseline",
+   "extra": {
+    "demand_change_pct": 10,
+    "supplier_cost_change_pct": 6
+   },
+   "budget": 2000.0,
+   "expected": {
+    "revenue": 226050.99999999965,
+    "sales_revenue": 226050.99999999965,
+    "delivery_revenue": 0.0,
+    "cogs": 142700.11500000008,
+    "waste_cost": 0.0,
+    "gross_profit": 83350.88499999957,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 67915.71428571438,
+    "operating_profit": 15435.170714285196,
+    "avg_monthly_operating_profit": 5145.056904761732,
+    "one_time_costs": 0.0,
+    "ending_cash": 58387.40000000015,
+    "min_cash": 31059.800000000003,
+    "units_sold": 63845.0,
+    "units_demanded": 63855.0,
+    "waste_units": 0.0,
+    "fill_rate": 0.9998433951922324,
+    "waste_rate": 0.0,
+    "stockout_rate": 0.001851851851851852,
+    "ending_inventory_units": 2884.999999999998,
+    "ending_inventory_value": 6524.564999999996,
+    "purchases_paid": 140301.60000000003,
+    "labor_utilization": 0.811519607843136
+   },
+   "outcome": "passed",
+   "violations": []
+  },
+  {
+   "scenario": "inventory",
+   "extra": {
+    "demand_change_pct": 10,
+    "supplier_cost_change_pct": 6
+   },
+   "budget": 2000.0,
+   "expected": {
+    "revenue": 226115.99999999965,
+    "sales_revenue": 226115.99999999965,
+    "delivery_revenue": 0.0,
+    "cogs": 142744.6350000001,
+    "waste_cost": 1778.0042146165467,
+    "gross_profit": 81593.360785383,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 67915.71428571438,
+    "operating_profit": 13677.646499668626,
+    "avg_monthly_operating_profit": 4559.215499889542,
+    "one_time_costs": 0.0,
+    "ending_cash": 49265.924504525814,
+    "min_cash": 27273.064888392862,
+    "units_sold": 63855.0,
+    "units_demanded": 63855.0,
+    "waste_units": 1032.557994847928,
+    "fill_rate": 1.0,
+    "waste_rate": 0.015913035206686514,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 3042.5,
+    "ending_inventory_value": 7056.1431808578145,
+    "purchases_paid": 149488.07549547436,
+    "labor_utilization": 0.811519607843136
+   },
+   "outcome": "passed",
+   "violations": []
+  },
+  {
+   "scenario": "delivery",
+   "extra": {
+    "demand_change_pct": 10,
+    "supplier_cost_change_pct": 6
+   },
+   "budget": 2000.0,
+   "expected": {
+    "revenue": 224274.3830354825,
+    "sales_revenue": 214893.28903654462,
+    "delivery_revenue": 9381.09399893787,
+    "cogs": 135659.85647840545,
+    "waste_cost": 56.82093023255788,
+    "gross_profit": 88557.70562684449,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 16425.0,
+    "operating_expenses": 84340.71428571438,
+    "operating_profit": 4216.9913411301095,
+    "avg_monthly_operating_profit": 1405.6637803767032,
+    "one_time_costs": 3500.0,
+    "ending_cash": 40684.63303548295,
+    "min_cash": 26419.265267777446,
+    "units_sold": 60685.7142857144,
+    "units_demanded": 72630.0,
+    "waste_units": 35.736434108526964,
+    "fill_rate": 0.8355461143565248,
+    "waste_rate": 0.0005885306376064655,
+    "stockout_rate": 0.0,
+    "ending_inventory_units": 1328.5492801771752,
+    "ending_inventory_value": 2759.6025913620997,
+    "purchases_paid": 136302.75,
+    "labor_utilization": 1.1517973856209145
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target",
+    "budget"
+   ]
+  },
+  {
+   "scenario": "price",
+   "extra": {
+    "demand_change_pct": 10,
+    "supplier_cost_change_pct": 6
+   },
+   "budget": 2000.0,
+   "expected": {
+    "revenue": 226509.03322274084,
+    "sales_revenue": 226509.03322274084,
+    "delivery_revenue": 0.0,
+    "cogs": 140336.98747658226,
+    "waste_cost": 0.0,
+    "gross_profit": 86172.04574615858,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 67915.71428571438,
+    "operating_profit": 18256.3314604442,
+    "avg_monthly_operating_profit": 6085.443820148066,
+    "one_time_costs": 0.0,
+    "ending_cash": 59735.83322274132,
+    "min_cash": 31064.35185572096,
+    "units_sold": 62822.45692722122,
+    "units_demanded": 62824.91754736102,
+    "waste_units": 0.0,
+    "fill_rate": 0.9999608336909006,
+    "waste_rate": 0.0,
+    "stockout_rate": 0.003703703703703704,
+    "ending_inventory_units": 1607.543072778877,
+    "ending_inventory_value": 3465.7925234177333,
+    "purchases_paid": 139411.20000000007,
+    "labor_utilization": 0.7984285091349438
+   },
+   "outcome": "passed",
+   "violations": []
+  },
+  {
+   "scenario": "stress",
+   "extra": {
+    "demand_change_pct": 10,
+    "supplier_cost_change_pct": 6
+   },
+   "budget": 2000.0,
+   "expected": {
+    "revenue": 191931.44999999984,
+    "sales_revenue": 191931.44999999984,
+    "delivery_revenue": 0.0,
+    "cogs": 130618.72050000005,
+    "waste_cost": 0.0,
+    "gross_profit": 61312.72949999978,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 67915.71428571438,
+    "operating_profit": -6602.984785714594,
+    "avg_monthly_operating_profit": -2200.9949285715315,
+    "one_time_costs": 4000.0,
+    "ending_cash": 29386.800000000036,
+    "min_cash": 19929.500000000044,
+    "units_sold": 54148.5,
+    "units_demanded": 55147.5,
+    "waste_units": 0.0,
+    "fill_rate": 0.9818849449204406,
+    "waste_rate": 0.0,
+    "stockout_rate": 0.07407407407407407,
+    "ending_inventory_units": 1781.5,
+    "ending_inventory_value": 4047.1995000000006,
+    "purchases_paid": 131182.65000000002,
+    "labor_utilization": 0.7008578431372543
+   },
+   "outcome": "failed_constraints",
+   "violations": [
+    "profit_target",
+    "budget"
+   ]
+  },
+  {
+   "scenario": "lean",
+   "extra": {
+    "demand_change_pct": 10,
+    "supplier_cost_change_pct": 6
+   },
+   "budget": 2000.0,
+   "expected": {
+    "revenue": 226050.99999999965,
+    "sales_revenue": 226050.99999999965,
+    "delivery_revenue": 0.0,
+    "cogs": 142700.11500000008,
+    "waste_cost": 0.0,
+    "gross_profit": 83350.88499999957,
+    "labor_cost": 38648.571428571464,
+    "recurring_expenses": 29267.142857142913,
+    "delivery_costs": 0.0,
+    "operating_expenses": 67915.71428571438,
+    "operating_profit": 15435.170714285196,
+    "avg_monthly_operating_profit": 5145.056904761732,
+    "one_time_costs": 0.0,
+    "ending_cash": 58498.70000000012,
+    "min_cash": 31115.45,
+    "units_sold": 63845.0,
+    "units_demanded": 63855.0,
+    "waste_units": 0.0,
+    "fill_rate": 0.9998433951922324,
+    "waste_rate": 0.0,
+    "stockout_rate": 0.001851851851851852,
+    "ending_inventory_units": 2062.4999999999973,
+    "ending_inventory_value": 4638.427499999993,
+    "purchases_paid": 140190.3,
+    "labor_utilization": 0.811519607843136
+   },
+   "outcome": "passed",
+   "violations": []
+  }
+ ]
+}

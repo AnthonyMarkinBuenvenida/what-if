@@ -1,0 +1,13 @@
+{
+ "captured_from": "https://api.frankfurter.dev/v2/rate/usd/php?providers=BSP",
+ "captured_at": "2026-10-22T10:53:11Z",
+ "status": 200,
+ "content_type": "application/json; charset=utf-8",
+ "json": {
+  "date": "2026-10-22",
+  "base": "USD",
+  "quote": "PHP",
+  "rate": 63.35
+ },
+ "text": null
+}

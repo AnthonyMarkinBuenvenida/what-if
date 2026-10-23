@@ -1,0 +1,11 @@
+# Runtime dependencies for the Vercel Python function (api/index.py).
+# Local development and tests use backend/requirements.txt.
+fastapi>=0.115
+sqlalchemy>=2.0
+pydantic>=2.7
+numpy>=1.26
+openpyxl>=3.1
+python-multipart>=0.0.9
+anthropic>=1.0
+httpx>=0.27
+prometheus_client>=0.20

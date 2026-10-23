@@ -1,0 +1,147 @@
+{
+ "captured_from": "https://api.worldbank.org/v2/country/PH/indicator/FP.CPI.TOTL.ZG?format=json&mrv=8&per_page=8",
+ "captured_at": "2026-10-22T10:53:06Z",
+ "status": 200,
+ "content_type": "application/json;charset=utf-8",
+ "json": [
+  {
+   "page": 1,
+   "pages": 1,
+   "per_page": 8,
+   "total": 8,
+   "sourceid": "2",
+   "lastupdated": "2026-10-08"
+  },
+  [
+   {
+    "indicator": {
+     "id": "FP.CPI.TOTL.ZG",
+     "value": "Inflation, consumer prices (annual %)"
+    },
+    "country": {
+     "id": "PH",
+     "value": "Philippines"
+    },
+    "countryiso3code": "PHL",
+    "date": "2025",
+    "value": 1.6587364525509,
+    "unit": "",
+    "obs_status": "",
+    "decimal": 1
+   },
+   {
+    "indicator": {
+     "id": "FP.CPI.TOTL.ZG",
+     "value": "Inflation, consumer prices (annual %)"
+    },
+    "country": {
+     "id": "PH",
+     "value": "Philippines"
+    },
+    "countryiso3code": "PHL",
+    "date": "2024",
+    "value": 3.21260487006347,
+    "unit": "",
+    "obs_status": "",
+    "decimal": 1
+   },
+   {
+    "indicator": {
+     "id": "FP.CPI.TOTL.ZG",
+     "value": "Inflation, consumer prices (annual %)"
+    },
+    "country": {
+     "id": "PH",
+     "value": "Philippines"
+    },
+    "countryiso3code": "PHL",
+    "date": "2023",
+    "value": 5.97802515541409,
+    "unit": "",
+    "obs_status": "",
+    "decimal": 1
+   },
+   {
+    "indicator": {
+     "id": "FP.CPI.TOTL.ZG",
+     "value": "Inflation, consumer prices (annual %)"
+    },
+    "country": {
+     "id": "PH",
+     "value": "Philippines"
+    },
+    "countryiso3code": "PHL",
+    "date": "2022",
+    "value": 5.82115811213954,
+    "unit": "",
+    "obs_status": "",
+    "decimal": 1
+   },
+   {
+    "indicator": {
+     "id": "FP.CPI.TOTL.ZG",
+     "value": "Inflation, consumer prices (annual %)"
+    },
+    "country": {
+     "id": "PH",
+     "value": "Philippines"
+    },
+    "countryiso3code": "PHL",
+    "date": "2021",
+    "value": 3.92718022100332,
+    "unit": "",
+    "obs_status": "",
+    "decimal": 1
+   },
+   {
+    "indicator": {
+     "id": "FP.CPI.TOTL.ZG",
+     "value": "Inflation, consumer prices (annual %)"
+    },
+    "country": {
+     "id": "PH",
+     "value": "Philippines"
+    },
+    "countryiso3code": "PHL",
+    "date": "2020",
+    "value": 2.3931623931624,
+    "unit": "",
+    "obs_status": "",
+    "decimal": 1
+   },
+   {
+    "indicator": {
+     "id": "FP.CPI.TOTL.ZG",
+     "value": "Inflation, consumer prices (annual %)"
+    },
+    "country": {
+     "id": "PH",
+     "value": "Philippines"
+    },
+    "countryiso3code": "PHL",
+    "date": "2019",
+    "value": 2.39206534422404,
+    "unit": "",
+    "obs_status": "",
+    "decimal": 1
+   },
+   {
+    "indicator": {
+     "id": "FP.CPI.TOTL.ZG",
+     "value": "Inflation, consumer prices (annual %)"
+    },
+    "country": {
+     "id": "PH",
+     "value": "Philippines"
+    },
+    "countryiso3code": "PHL",
+    "date": "2018",
+    "value": 5.30934661627706,
+    "unit": "",
+    "obs_status": "",
+    "decimal": 1
+   }
+  ]
+ ],
+ "text": null
+}

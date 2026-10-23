@@ -1,0 +1,1479 @@
+{
+ "captured_from": "https://api.frankfurter.dev/v2/rates?base=usd&quotes=php&from=2025-10-22&providers=BSP",
+ "captured_at": "2026-10-22T10:53:12Z",
+ "status": 200,
+ "content_type": "application/json; charset=utf-8",
+ "json": [
+  {
+   "date": "2025-10-22",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.25
+  },
+  {
+   "date": "2025-10-23",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.4
+  },
+  {
+   "date": "2025-10-24",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.6
+  },
+  {
+   "date": "2025-10-27",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.6
+  },
+  {
+   "date": "2025-10-28",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.9
+  },
+  {
+   "date": "2025-10-29",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.15
+  },
+  {
+   "date": "2025-10-30",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.7
+  },
+  {
+   "date": "2025-11-03",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.85
+  },
+  {
+   "date": "2025-11-04",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.8
+  },
+  {
+   "date": "2025-11-05",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.5
+  },
+  {
+   "date": "2025-11-06",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.85
+  },
+  {
+   "date": "2025-11-07",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.95
+  },
+  {
+   "date": "2025-11-10",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.05
+  },
+  {
+   "date": "2025-11-11",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.95
+  },
+  {
+   "date": "2025-11-12",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.0
+  },
+  {
+   "date": "2025-11-13",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.15
+  },
+  {
+   "date": "2025-11-14",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.0
+  },
+  {
+   "date": "2025-11-17",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.05
+  },
+  {
+   "date": "2025-11-18",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.95
+  },
+  {
+   "date": "2025-11-19",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.0
+  },
+  {
+   "date": "2025-11-20",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.95
+  },
+  {
+   "date": "2025-11-21",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.05
+  },
+  {
+   "date": "2025-11-24",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.85
+  },
+  {
+   "date": "2025-11-25",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.85
+  },
+  {
+   "date": "2025-11-26",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.9
+  },
+  {
+   "date": "2025-11-27",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.85
+  },
+  {
+   "date": "2025-11-28",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.75
+  },
+  {
+   "date": "2025-12-01",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.65
+  },
+  {
+   "date": "2025-12-02",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.5
+  },
+  {
+   "date": "2025-12-03",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.5
+  },
+  {
+   "date": "2025-12-04",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.9
+  },
+  {
+   "date": "2025-12-05",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.0
+  },
+  {
+   "date": "2025-12-09",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.95
+  },
+  {
+   "date": "2025-12-10",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.2
+  },
+  {
+   "date": "2025-12-11",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.2
+  },
+  {
+   "date": "2025-12-12",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.0
+  },
+  {
+   "date": "2025-12-15",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.05
+  },
+  {
+   "date": "2025-12-16",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.05
+  },
+  {
+   "date": "2025-12-17",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.7
+  },
+  {
+   "date": "2025-12-18",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.75
+  },
+  {
+   "date": "2025-12-19",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.55
+  },
+  {
+   "date": "2025-12-22",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.7
+  },
+  {
+   "date": "2025-12-23",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.75
+  },
+  {
+   "date": "2025-12-26",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.85
+  },
+  {
+   "date": "2025-12-29",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.7
+  },
+  {
+   "date": "2026-01-02",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.8
+  },
+  {
+   "date": "2026-01-05",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.85
+  },
+  {
+   "date": "2026-01-06",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.15
+  },
+  {
+   "date": "2026-01-07",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.2
+  },
+  {
+   "date": "2026-01-08",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.35
+  },
+  {
+   "date": "2026-01-09",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.15
+  },
+  {
+   "date": "2026-01-12",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.25
+  },
+  {
+   "date": "2026-01-13",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.25
+  },
+  {
+   "date": "2026-01-14",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.35
+  },
+  {
+   "date": "2026-01-15",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.45
+  },
+  {
+   "date": "2026-01-16",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.45
+  },
+  {
+   "date": "2026-01-19",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.35
+  },
+  {
+   "date": "2026-01-20",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.45
+  },
+  {
+   "date": "2026-01-21",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.45
+  },
+  {
+   "date": "2026-01-22",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.25
+  },
+  {
+   "date": "2026-01-23",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.15
+  },
+  {
+   "date": "2026-01-26",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.1
+  },
+  {
+   "date": "2026-01-27",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.95
+  },
+  {
+   "date": "2026-01-28",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.1
+  },
+  {
+   "date": "2026-01-29",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.75
+  },
+  {
+   "date": "2026-01-30",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.95
+  },
+  {
+   "date": "2026-02-02",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.85
+  },
+  {
+   "date": "2026-02-03",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.9
+  },
+  {
+   "date": "2026-02-04",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.9
+  },
+  {
+   "date": "2026-02-05",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.95
+  },
+  {
+   "date": "2026-02-06",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.7
+  },
+  {
+   "date": "2026-02-09",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.6
+  },
+  {
+   "date": "2026-02-10",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.45
+  },
+  {
+   "date": "2026-02-11",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.55
+  },
+  {
+   "date": "2026-02-12",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.3
+  },
+  {
+   "date": "2026-02-13",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.1
+  },
+  {
+   "date": "2026-02-16",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.0
+  },
+  {
+   "date": "2026-02-18",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.0
+  },
+  {
+   "date": "2026-02-19",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 57.85
+  },
+  {
+   "date": "2026-02-20",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.0
+  },
+  {
+   "date": "2026-02-23",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.15
+  },
+  {
+   "date": "2026-02-24",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 57.55
+  },
+  {
+   "date": "2026-02-25",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 57.75
+  },
+  {
+   "date": "2026-02-26",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 57.5
+  },
+  {
+   "date": "2026-02-27",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 57.6
+  },
+  {
+   "date": "2026-03-02",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 57.65
+  },
+  {
+   "date": "2026-03-03",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.2
+  },
+  {
+   "date": "2026-03-04",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.45
+  },
+  {
+   "date": "2026-03-05",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.55
+  },
+  {
+   "date": "2026-03-06",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.65
+  },
+  {
+   "date": "2026-03-09",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.0
+  },
+  {
+   "date": "2026-03-10",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.5
+  },
+  {
+   "date": "2026-03-11",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 58.9
+  },
+  {
+   "date": "2026-03-12",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.15
+  },
+  {
+   "date": "2026-03-13",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.4
+  },
+  {
+   "date": "2026-03-16",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.75
+  },
+  {
+   "date": "2026-03-17",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.85
+  },
+  {
+   "date": "2026-03-18",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.8
+  },
+  {
+   "date": "2026-03-19",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.5
+  },
+  {
+   "date": "2026-03-23",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.1
+  },
+  {
+   "date": "2026-03-24",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.3
+  },
+  {
+   "date": "2026-03-25",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.95
+  },
+  {
+   "date": "2026-03-26",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.1
+  },
+  {
+   "date": "2026-03-27",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.25
+  },
+  {
+   "date": "2026-03-30",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.55
+  },
+  {
+   "date": "2026-03-31",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.7
+  },
+  {
+   "date": "2026-04-01",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.75
+  },
+  {
+   "date": "2026-04-06",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.15
+  },
+  {
+   "date": "2026-04-07",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.05
+  },
+  {
+   "date": "2026-04-08",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.35
+  },
+  {
+   "date": "2026-04-10",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.45
+  },
+  {
+   "date": "2026-04-13",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.95
+  },
+  {
+   "date": "2026-04-14",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.15
+  },
+  {
+   "date": "2026-04-15",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.85
+  },
+  {
+   "date": "2026-04-16",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.1
+  },
+  {
+   "date": "2026-04-17",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.95
+  },
+  {
+   "date": "2026-04-20",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.05
+  },
+  {
+   "date": "2026-04-21",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.95
+  },
+  {
+   "date": "2026-04-22",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 59.95
+  },
+  {
+   "date": "2026-04-23",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.15
+  },
+  {
+   "date": "2026-04-24",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.5
+  },
+  {
+   "date": "2026-04-27",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.7
+  },
+  {
+   "date": "2026-04-28",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.7
+  },
+  {
+   "date": "2026-04-29",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.3
+  },
+  {
+   "date": "2026-04-30",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.55
+  },
+  {
+   "date": "2026-05-04",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.5
+  },
+  {
+   "date": "2026-05-05",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.55
+  },
+  {
+   "date": "2026-05-06",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.55
+  },
+  {
+   "date": "2026-05-07",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.3
+  },
+  {
+   "date": "2026-05-08",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.4
+  },
+  {
+   "date": "2026-05-11",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.6
+  },
+  {
+   "date": "2026-05-12",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.15
+  },
+  {
+   "date": "2026-05-13",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.5
+  },
+  {
+   "date": "2026-05-14",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.4
+  },
+  {
+   "date": "2026-05-15",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.65
+  },
+  {
+   "date": "2026-05-18",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.7
+  },
+  {
+   "date": "2026-05-19",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.75
+  },
+  {
+   "date": "2026-05-20",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.75
+  },
+  {
+   "date": "2026-05-21",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.75
+  },
+  {
+   "date": "2026-05-22",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.6
+  },
+  {
+   "date": "2026-05-25",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.7
+  },
+  {
+   "date": "2026-05-26",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.45
+  },
+  {
+   "date": "2026-05-28",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.55
+  },
+  {
+   "date": "2026-05-29",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.6
+  },
+  {
+   "date": "2026-06-01",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.6
+  },
+  {
+   "date": "2026-06-02",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.75
+  },
+  {
+   "date": "2026-06-03",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.65
+  },
+  {
+   "date": "2026-06-04",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.75
+  },
+  {
+   "date": "2026-06-05",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.6
+  },
+  {
+   "date": "2026-06-08",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.45
+  },
+  {
+   "date": "2026-06-09",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.7
+  },
+  {
+   "date": "2026-06-10",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.55
+  },
+  {
+   "date": "2026-06-11",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.4
+  },
+  {
+   "date": "2026-06-15",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.35
+  },
+  {
+   "date": "2026-06-16",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.5
+  },
+  {
+   "date": "2026-06-17",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.3
+  },
+  {
+   "date": "2026-06-18",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.4
+  },
+  {
+   "date": "2026-06-19",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.55
+  },
+  {
+   "date": "2026-06-22",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.8
+  },
+  {
+   "date": "2026-06-23",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.1
+  },
+  {
+   "date": "2026-06-24",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.35
+  },
+  {
+   "date": "2026-06-25",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.55
+  },
+  {
+   "date": "2026-06-26",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.3
+  },
+  {
+   "date": "2026-06-29",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.3
+  },
+  {
+   "date": "2026-06-30",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.15
+  },
+  {
+   "date": "2026-07-01",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.35
+  },
+  {
+   "date": "2026-07-02",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.6
+  },
+  {
+   "date": "2026-07-03",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.55
+  },
+  {
+   "date": "2026-07-06",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.4
+  },
+  {
+   "date": "2026-07-07",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.5
+  },
+  {
+   "date": "2026-07-08",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.45
+  },
+  {
+   "date": "2026-07-09",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.5
+  },
+  {
+   "date": "2026-07-10",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.6
+  },
+  {
+   "date": "2026-07-13",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.5
+  },
+  {
+   "date": "2026-07-14",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.6
+  },
+  {
+   "date": "2026-07-15",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.7
+  },
+  {
+   "date": "2026-07-16",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.7
+  },
+  {
+   "date": "2026-07-17",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.6
+  },
+  {
+   "date": "2026-07-20",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.6
+  },
+  {
+   "date": "2026-07-21",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.7
+  },
+  {
+   "date": "2026-07-22",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.75
+  },
+  {
+   "date": "2026-07-23",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.75
+  },
+  {
+   "date": "2026-07-24",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.75
+  },
+  {
+   "date": "2026-07-27",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.85
+  },
+  {
+   "date": "2026-07-28",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.65
+  },
+  {
+   "date": "2026-07-29",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.6
+  },
+  {
+   "date": "2026-07-30",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.4
+  },
+  {
+   "date": "2026-07-31",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.55
+  },
+  {
+   "date": "2026-08-03",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.25
+  },
+  {
+   "date": "2026-08-04",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.95
+  },
+  {
+   "date": "2026-08-05",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.15
+  },
+  {
+   "date": "2026-08-06",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.75
+  },
+  {
+   "date": "2026-08-07",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.8
+  },
+  {
+   "date": "2026-08-10",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.9
+  },
+  {
+   "date": "2026-08-11",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 60.7
+  },
+  {
+   "date": "2026-08-12",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.25
+  },
+  {
+   "date": "2026-08-13",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.2
+  },
+  {
+   "date": "2026-08-14",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.35
+  },
+  {
+   "date": "2026-08-17",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.45
+  },
+  {
+   "date": "2026-08-18",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.5
+  },
+  {
+   "date": "2026-08-19",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.8
+  },
+  {
+   "date": "2026-08-20",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.8
+  },
+  {
+   "date": "2026-08-24",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.65
+  },
+  {
+   "date": "2026-08-25",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.75
+  },
+  {
+   "date": "2026-08-26",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.75
+  },
+  {
+   "date": "2026-08-27",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.65
+  },
+  {
+   "date": "2026-08-28",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 61.9
+  },
+  {
+   "date": "2026-09-01",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.25
+  },
+  {
+   "date": "2026-09-02",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.4
+  },
+  {
+   "date": "2026-09-03",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.55
+  },
+  {
+   "date": "2026-09-04",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.5
+  },
+  {
+   "date": "2026-09-07",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.6
+  },
+  {
+   "date": "2026-09-08",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.6
+  },
+  {
+   "date": "2026-09-09",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.65
+  },
+  {
+   "date": "2026-09-10",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.5
+  },
+  {
+   "date": "2026-09-11",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.55
+  },
+  {
+   "date": "2026-09-14",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.7
+  },
+  {
+   "date": "2026-09-15",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.85
+  },
+  {
+   "date": "2026-09-16",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.85
+  },
+  {
+   "date": "2026-09-17",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.75
+  },
+  {
+   "date": "2026-09-18",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.75
+  },
+  {
+   "date": "2026-09-21",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.75
+  },
+  {
+   "date": "2026-09-22",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.8
+  },
+  {
+   "date": "2026-09-23",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.75
+  },
+  {
+   "date": "2026-09-24",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.6
+  },
+  {
+   "date": "2026-09-25",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.75
+  },
+  {
+   "date": "2026-09-28",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.45
+  },
+  {
+   "date": "2026-09-29",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.55
+  },
+  {
+   "date": "2026-09-30",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.55
+  },
+  {
+   "date": "2026-10-01",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.65
+  },
+  {
+   "date": "2026-10-02",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.8
+  },
+  {
+   "date": "2026-10-05",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.55
+  },
+  {
+   "date": "2026-10-06",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.6
+  },
+  {
+   "date": "2026-10-07",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.75
+  },
+  {
+   "date": "2026-10-08",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.75
+  },
+  {
+   "date": "2026-10-09",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.9
+  },
+  {
+   "date": "2026-10-12",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.8
+  },
+  {
+   "date": "2026-10-13",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.75
+  },
+  {
+   "date": "2026-10-14",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.8
+  },
+  {
+   "date": "2026-10-15",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 62.85
+  },
+  {
+   "date": "2026-10-16",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 63.05
+  },
+  {
+   "date": "2026-10-19",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 63.0
+  },
+  {
+   "date": "2026-10-20",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 63.1
+  },
+  {
+   "date": "2026-10-21",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 63.1
+  },
+  {
+   "date": "2026-10-22",
+   "base": "USD",
+   "quote": "PHP",
+   "rate": 63.35
+  }
+ ],
+ "text": null
+}
