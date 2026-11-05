@@ -223,7 +223,7 @@ export function BridgeChart({ start, end, items, cur }: { start: number; end: nu
               <motion.div className="absolute inset-y-[3px] rounded-[4px]" style={{ background: color, opacity: r.kind === "total" ? 0.9 : 1 }}
                 initial={false} animate={{ left: a, width: Math.max(2, b - a) }} transition={reduced ? { duration: 0 } : { duration: 0.6, ease: [0.16, 1, 0.3, 1] }} />
             </div>
-            <span role="cell" className="num text-right text-[0.84rem]">{r.kind === "total" ? "" : r.value >= 0 ? "+" : "−"}{compact(Math.abs(r.value), cur).replace(/^-/, "")}</span>
+            <span role="cell" className="num text-right text-[0.84rem]">{r.kind === "total" ? (r.value < 0 ? "−" : "") : r.value >= 0 ? "+" : "−"}{compact(Math.abs(r.value), cur).replace(/^-/, "")}</span>
           </div>
         );
       })}

@@ -15,11 +15,12 @@ location or history rows.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
-from ..agents.llm import llm, ungrounded_numbers
+from ..agents.llm import llm, public_reason, ungrounded_numbers
 from . import rules_parser
 from .schemas import Levers, Profile
 
@@ -56,11 +57,22 @@ class AIRecommendation(BaseModel):
     try_question: str | None = Field(None, description="A 'What if ...' question the user could simulate next")
 
 
+CHARTS = ("comparison", "trend", "expenses", "break_even", "impact", "range", "risks")
+
+
+class AIChartNote(BaseModel):
+    chart: Literal["comparison", "trend", "expenses", "break_even", "impact", "range", "risks"]
+    note: str = Field(description="1-2 sentences: what this chart shows for this scenario, using only its figures")
+
+
 class AIExplanation(BaseModel):
     summary: str = Field(description="2-4 sentences: what changes, why, and whether it appears worthwhile under the assumptions")
     key_points: list[str] = Field(description="Up to 5 short points, each tied to a calculated figure")
+    chart_notes: list[AIChartNote] = Field(default_factory=list, description="One short note per chart in `charts`")
     risk_notes: list[AIRiskNote] = Field(default_factory=list)
     recommendations: list[AIRecommendation] = Field(default_factory=list)
+    not_recommended: list[str] = Field(default_factory=list, description="Up to 3 specific actions to avoid here, each with its reason")
+    next_step: str | None = Field(None, description="The single most useful next simulation to run, as a short instruction")
     next_scenarios: list[str] = Field(default_factory=list, description="Up to 4 'What if ...' questions worth testing")
     caveats: list[str] = Field(default_factory=list, description="Assumptions or missing information that matter most")
 
@@ -218,6 +230,81 @@ def _fmt(v: float) -> str:
     return f"{v:,.0f}"
 
 
+EXPENSES = (("variable_costs", "Variable costs (products, ingredients)"), ("staff_costs", "Staff"),
+            ("fixed_costs", "Fixed costs (rent, utilities, other)"), ("marketing", "Marketing"), ("tax", "Tax"))
+
+
+def expense_breakdown(totals: dict) -> list[dict]:
+    """The engine's expense categories for one projection, largest first (the same split the charts show)."""
+    rows = [{"key": k, "label": label, "value": totals.get(k) or 0.0} for k, label in EXPENSES]
+    total = sum(r["value"] for r in rows) or 1.0
+    for r in rows:
+        r["share"] = r["value"] / total
+    return sorted(rows, key=lambda r: -r["value"])
+
+
+def chart_data(sim: dict) -> dict:
+    """The figures behind each results chart, as the AI is asked to interpret them."""
+    s, b = sim["scenario"], sim["baseline"]
+    st, bt, sm, bm = s["totals"], b["totals"], s["metrics"], b["metrics"]
+    expenses = lambda t: (t.get("variable_costs") or 0) + (t.get("operating_expenses") or 0) + (t.get("tax") or 0)  # noqa: E731
+    best_month = max(s["months"], key=lambda m: m["net_profit"]) if s["months"] else None
+    worst_month = min(s["months"], key=lambda m: m["net_profit"]) if s["months"] else None
+    return {
+        "comparison": {"current_course": {"revenue": bt["revenue"], "total_expenses": expenses(bt), "gross_profit": bt["gross_profit"], "net_profit": bt["net_profit"], "net_margin": bm["net_margin"]},
+                       "scenario": {"revenue": st["revenue"], "total_expenses": expenses(st), "gross_profit": st["gross_profit"], "net_profit": st["net_profit"], "net_margin": sm["net_margin"]}},
+        "trend": {"months": len(s["months"]), "best_month": best_month and {"month": best_month["month"], "net_profit": best_month["net_profit"]},
+                  "worst_month": worst_month and {"month": worst_month["month"], "net_profit": worst_month["net_profit"]}},
+        "expenses": {"scenario": expense_breakdown(st), "current_course": expense_breakdown(bt)},
+        "break_even": {"break_even_units": sm["break_even_units"], "average_units": s["monthly_avg"]["units"], "safety_margin": sm["safety_margin"],
+                       "contribution_per_unit": sm["contribution_per_unit"], "current_course_break_even_units": bm["break_even_units"]},
+        "impact": sim["bridge"],
+        "range": {"scenario": {k: sim["bands"][k]["net_profit"] for k in ("worst", "best")} | {"expected": st["net_profit"]},
+                  "current_course": {k: sim["baseline_bands"][k]["net_profit"] for k in ("worst", "best")} | {"expected": bt["net_profit"]},
+                  "ranges": sim["bands"]["ranges"], "cases": sim["bands"]["cases"]},
+    }
+
+
+def chart_notes(sim: dict, risks: dict, cur: str, unit_label: str) -> dict:
+    """One short note per chart, written from the calculation by fixed rules (no AI)."""
+    s, b = sim["scenario"], sim["baseline"]
+    d = sim["delta"]
+    c = chart_data(sim)
+    notes = {}
+    if sim.get("is_baseline"):
+        notes["comparison"] = f"This run is the current course, so the scenario equals the baseline: revenue {_fmt(b['totals']['revenue'])} {cur}, net profit {_fmt(b['totals']['net_profit'])} {cur}."
+    else:
+        cc, sc = c["comparison"]["current_course"], c["comparison"]["scenario"]
+        notes["comparison"] = (f"Revenue {'rises' if sc['revenue'] >= cc['revenue'] else 'falls'} from {_fmt(cc['revenue'])} to {_fmt(sc['revenue'])} {cur}, "
+                               f"total expenses from {_fmt(cc['total_expenses'])} to {_fmt(sc['total_expenses'])} {cur}, and net profit "
+                               f"{'rises' if sc['net_profit'] >= cc['net_profit'] else 'falls'} from {_fmt(cc['net_profit'])} to {_fmt(sc['net_profit'])} {cur}.")
+    t = c["trend"]
+    if t["best_month"] and t["months"] > 1:
+        notes["trend"] = (f"Monthly net profit in this scenario is highest in {t['best_month']['month']} ({_fmt(t['best_month']['net_profit'])} {cur}) "
+                          f"and lowest in {t['worst_month']['month']} ({_fmt(t['worst_month']['net_profit'])} {cur}); these are calculated months, not actual results.")
+    ex = c["expenses"]["scenario"]
+    if ex and ex[0]["value"] > 0:
+        notes["expenses"] = (f"The largest cost is {ex[0]['label'].lower()} at {_fmt(ex[0]['value'])} {cur} ({ex[0]['share'] * 100:.0f}% of expenses)"
+                             + (f", followed by {ex[1]['label'].lower()} ({ex[1]['share'] * 100:.0f}%)." if len(ex) > 1 and ex[1]["value"] > 0 else "."))
+    be = c["break_even"]
+    if be["break_even_units"] is None:
+        notes["break_even"] = "There is no break-even point: on average each unit sells for less than its variable cost, so more sales add to the loss."
+    else:
+        gap = be["average_units"] - be["break_even_units"]
+        notes["break_even"] = (f"The business sells about {_fmt(be['average_units'])} {unit_label} a month against a break-even of {_fmt(be['break_even_units'])}, "
+                               + (f"{_fmt(gap)} above it." if gap >= 0 else f"{_fmt(-gap)} short of it."))
+    if not sim.get("is_baseline") and sim["bridge"]:
+        top = sorted(sim["bridge"], key=lambda x: -abs(x["value"]))[:2]
+        notes["impact"] = "Largest effects on net profit: " + "; ".join(f"{x['label'].lower()} {'+' if x['value'] >= 0 else '−'}{_fmt(abs(x['value']))} {cur}" for x in top) + "."
+    r = c["range"]["scenario"]
+    notes["range"] = (f"Across {c['range']['cases']} combinations of your uncertainty ranges, net profit runs from {_fmt(r['worst'])} to {_fmt(r['best'])} {cur} "
+                      f"(expected {_fmt(r['expected'])})." + (" The worst case is a loss." if r["worst"] < 0 <= r["expected"] else ""))
+    fs = risks.get("findings", [])
+    notes["risks"] = (f"Risk Radar rates this {risks.get('level', 'low')} with {len(fs)} warning{'' if len(fs) == 1 else 's'}; the most severe is “{fs[0]['title']}”."
+                      if fs else "No Risk Radar rule is triggered by these figures.")
+    return notes
+
+
 def calculation_explanation(sim: dict, risks: dict, cur: str, unit_label: str) -> dict:
     """Plain-language explanation built only from the calculation (no AI)."""
     a = assessment(sim)
@@ -254,8 +341,16 @@ def calculation_explanation(sim: dict, risks: dict, cur: str, unit_label: str) -
             if act.get("levers"):
                 recs.append({"text": f"{f['title']}: {act['label'].lower()}.", "try_question": None, "levers": act["levers"]})
     caveats = [x["text"] for x in sim["confidence"]["reasons"][:3]]
+    from .advisor import AVOID  # rule-based "not recommended" items (the same ones Risk Radar uses)
+    avoid, seen = [], set()
+    for f in risks.get("findings", []):
+        if f["rule"] in AVOID and f["rule"] not in seen and len(avoid) < 3:
+            seen.add(f["rule"])
+            avoid.append(f"{AVOID[f['rule']][0]}: {AVOID[f['rule']][1]}")
     return {"mode": "calculation", "model": None, "assessment": a, "required_volume": rv, "summary": summary,
-            "key_points": pts[:5], "risk_notes": [], "recommendations": recs, "next_scenarios": [], "caveats": caveats, "dropped": 0,
+            "key_points": pts[:5], "chart_notes": chart_notes(sim, risks, cur, unit_label), "risk_notes": [], "recommendations": recs,
+            "not_recommended": avoid, "next_step": recs[0]["text"] if recs else None, "next_scenarios": [], "caveats": caveats, "dropped": 0,
+            "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
             "notice": None if llm.available else "AI is not connected. This explanation was written from the calculation by fixed rules."}
 
 
@@ -267,7 +362,14 @@ Rules:
 - Do not invent market data, competitor behaviour or statistics.
 - Keep it short, concrete and in plain language. Explain why the numbers changed and whether the change appears worthwhile.
 - Recommendations should be things the owner can test in the simulator; phrase try_question as a "What if ..." question.
-- Refer to risk findings by their finding_id when you explain them."""
+- Refer to risk findings by their finding_id when you explain them.
+- chart_notes: one note per chart in `charts` (comparison, trend, expenses, break_even, impact, range, risks). Say what the chart
+  shows for this scenario using only that chart's figures; name the biggest change. 1-2 sentences each.
+- Never call a scenario profitable or better when the figures show a loss or a decline; calculated months are projections, not actual results.
+- not_recommended: specific actions with an identifiable downside here, each with its reason; empty if none is supported.
+- Recommendations are suggestions to test, never guarantees: use "Consider ...", "Test ...".
+- Write numbers as the app shows them: money rounded to whole units with thousands separators (e.g. 4,621,395 PHP),
+  percentages and shares to one decimal (e.g. 48.2%), units to whole numbers. Fractions such as 0.0076 are percentages (0.8%)."""
 
 
 def _pack(sim: dict, risks: dict, profile: Profile) -> dict:
@@ -281,6 +383,7 @@ def _pack(sim: dict, risks: dict, profile: Profile) -> dict:
         "best_worst": {"scenario": {k: sim["bands"][k]["net_profit"] for k in ("best", "worst")},
                        "baseline": {k: sim["baseline_bands"][k]["net_profit"] for k in ("best", "worst")}},
         "assessment": assessment(sim), "required_volume": required_volume(sim),
+        "charts": chart_data(sim),
         "confidence": sim["confidence"], "assumptions": sim["assumptions"],
         "risks": [{"finding_id": f["id"], "severity": f["severity"], "title": f["title"], "summary": f["summary"],
                    "metric": f["metric"], "actions": [a["label"] for a in f["actions"]]} for f in risks.get("findings", [])[:8]],
@@ -295,9 +398,17 @@ def explain(sim: dict, risks: dict, profile: Profile) -> dict:
     facts = _facts(pack)
     out = llm.structured(EXPLAIN_SYSTEM, "Facts (JSON):\n" + json.dumps(pack, default=str)[:60000], AIExplanation, effort="medium")
     if out is None:
-        base["notice"] = f"The AI explanation could not be produced ({llm.last_error}). This explanation was written from the calculation."
+        base["notice"] = f"The AI explanation could not be produced ({public_reason(llm.last_error)}). This explanation was written from the calculation."
         return base
-    summary, d1 = _grounded([out.summary], facts)
+    from .advisor import OVERCLAIM  # promised outcomes and predictions of failure are removed, as in Risk Radar assessments
+    over = 0
+
+    def plain(items: list[str]) -> list[str]:
+        nonlocal over
+        keep = [t for t in items if not OVERCLAIM.search(t)]
+        over += len(items) - len(keep)
+        return keep
+    summary, d1 = _grounded(plain([out.summary]), facts)
     points, d2 = _grounded(out.key_points[:5], facts)
     caveats, d3 = _grounded(out.caveats[:5], facts)
     notes = []
@@ -310,14 +421,31 @@ def explain(sim: dict, risks: dict, profile: Profile) -> dict:
             dropped += 1
     recs = []
     for r in out.recommendations[:5]:
-        if ungrounded_numbers(r.text, facts):
+        if ungrounded_numbers(r.text, facts) or OVERCLAIM.search(r.text):
             dropped += 1
             continue
         recs.append(r.model_dump())
+    # Per-chart notes: grounded and plain, one per chart; a chart without a usable AI note keeps the rule-based one.
+    cnotes = dict(base["chart_notes"])
+    ai_charts = []
+    for n in out.chart_notes:
+        if n.chart in cnotes or n.chart in CHARTS:
+            if ungrounded_numbers(n.note, facts) or OVERCLAIM.search(n.note):
+                dropped += 1
+                continue
+            cnotes[n.chart] = n.note
+            ai_charts.append(n.chart)
+    avoid, d4 = _grounded(plain(out.not_recommended[:3]), facts)
+    nxt = out.next_step if out.next_step and not ungrounded_numbers(out.next_step, facts) and not OVERCLAIM.search(out.next_step) else base["next_step"]
+    dropped += d4 + over
     return {"mode": "ai", "model": llm.last_model or llm.model, "provider": llm.provider, "assessment": base["assessment"], "required_volume": base["required_volume"],
             "summary": summary[0] if summary else base["summary"], "key_points": points or base["key_points"], "risk_notes": notes,
-            "recommendations": recs, "next_scenarios": out.next_scenarios[:4], "caveats": caveats or base["caveats"], "dropped": dropped,
-            "notice": (f"{dropped} AI statement(s) were removed because they cited figures that are not in the calculation." if dropped else None)}
+            "chart_notes": cnotes, "chart_notes_ai": ai_charts,
+            "recommendations": recs, "not_recommended": avoid or base["not_recommended"], "next_step": nxt,
+            "next_scenarios": out.next_scenarios[:4], "caveats": caveats or base["caveats"], "dropped": dropped,
+            "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(), "context": pack,
+            "notice": (f"{dropped} AI statement(s) were removed because they cited figures that are not in the calculation, promised an outcome or predicted failure."
+                       if dropped else None)}
 
 
 COMPARE_SYSTEM = """You compare business scenarios that a deterministic engine has already calculated.

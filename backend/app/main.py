@@ -7,12 +7,13 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from sqlalchemy.exc import OperationalError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
-from .db import init_db
+from .db import db_health, init_db
 from .jobs import recover_interrupted_runs
 from .telemetry import HTTP_LATENCY, HTTP_REQUESTS, exposition
 from .routers import businesses, insights, live, public, research, simulations, whatif, workspace
@@ -69,7 +70,16 @@ def metrics():
 
 @app.get("/api/health")
 def health():
-    return {"ok": True}
+    """Liveness plus a real database round trip; reports which storage is in use and whether it is durable."""
+    db = db_health()
+    return JSONResponse({"ok": db["ok"], "database": db}, status_code=200 if db["ok"] else 503)
+
+
+@app.exception_handler(OperationalError)
+async def database_unavailable(request: Request, exc: OperationalError):
+    """A lost or refused database connection: say so plainly; nothing is half-saved (the transaction is rolled back)."""
+    logging.getLogger("startup.db").warning("Database error on %s: %s", request.url.path, type(exc.orig).__name__ if exc.orig else "OperationalError")
+    return JSONResponse({"detail": "The database is temporarily unavailable, so nothing was saved. Please try again in a moment."}, status_code=503)
 
 
 # Serve the built frontend when it exists (production / single-process mode).

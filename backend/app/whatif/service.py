@@ -1,6 +1,8 @@
 """What-if business logic shared by the API routes."""
 from __future__ import annotations
 
+import time
+
 import csv
 import io
 from datetime import datetime, timezone
@@ -93,8 +95,24 @@ def _values(spec: dict):
             yield path, None
 
 
+def _fill(raw, full):
+    """Add keys that exist in `full` but not in `raw`, recursively; every stored value is kept as it is."""
+    if not isinstance(raw, dict) or not isinstance(full, dict):
+        return raw
+    return {**{k: v for k, v in full.items() if k not in raw}, **{k: _fill(v, full.get(k)) for k, v in raw.items()}}
+
+
+def complete_spec(spec: dict) -> dict:
+    """A stored profile in the current format. Profiles saved before a field existed (e.g. `external`, added on
+    2026-10-22) lack it; the engine fills defaults, so the browser must receive the same complete profile."""
+    try:
+        return _fill(spec, Profile.model_validate(spec).model_dump(mode="json"))
+    except ValidationError:
+        return spec
+
+
 def profile_out(row: WhatIfProfile) -> dict:
-    return {"id": row.id, "version": row.version, "spec": row.spec, "validation": row.validation, "note": row.note,
+    return {"id": row.id, "version": row.version, "spec": complete_spec(row.spec), "validation": row.validation, "note": row.note,
             "created_by": row.created_by, "created_at": row.created_at.isoformat()}
 
 
@@ -118,24 +136,34 @@ def run(profile: Profile, levers: Levers, signals: dict | None = None, origin: d
     return engine.round_result(sim), {"scenario": engine.round_result(risks), "baseline": engine.round_result(base_risks)}
 
 
-def scenario_out(s: WhatIfScenario, full: bool = False) -> dict:
+def scenario_out(s: WhatIfScenario, full: bool = False, profile_row: WhatIfProfile | None = None) -> dict:
     r = s.result or {}
     d = r.get("delta", {})
+    expl = s.explanation or {}
     out = {
         "id": s.id, "business_id": s.business_id, "profile_id": s.profile_id, "name": s.name, "question": s.question,
         "levers": s.levers, "origin": s.origin, "pinned": s.pinned,
         "created_at": s.created_at.isoformat(), "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+        "opened_at": s.opened_at.isoformat() if s.opened_at else None, "calc_ms": s.calc_ms, "source_scenario_id": s.source_scenario_id,
+        "engine": r.get("engine"), "computed_at": r.get("computed_at"),
+        "explanation_mode": expl.get("mode"), "explanation_model": expl.get("model"),
         "summary": {
             "horizon_months": (r.get("scenario") or {}).get("horizon_months"),
             "net_profit": (d.get("net_profit") or {}).get("scenario"), "net_profit_baseline": (d.get("net_profit") or {}).get("baseline"),
             "revenue": (d.get("revenue") or {}).get("scenario"), "net_margin": (d.get("net_margin") or {}).get("scenario"),
             "risk_score": ((s.risks or {}).get("scenario") or {}).get("score"), "risk_level": ((s.risks or {}).get("scenario") or {}).get("level"),
             "confidence": (r.get("confidence") or {}).get("level"), "is_baseline": r.get("is_baseline"),
-            "assessment": ((s.explanation or {}).get("assessment") or {}).get("key"),
+            "assessment": (expl.get("assessment") or {}).get("key"),
+            "change": (d.get("net_profit") or {}).get("change"),
+            "currency": r.get("currency"),
         },
     }
     if full:
-        out.update({"result": s.result, "risks": s.risks, "explanation": s.explanation, "interpretation": s.interpretation})
+        # The AI's input pack is stored for traceability but not sent back to the browser.
+        out.update({"result": s.result, "risks": s.risks, "explanation": {k: v for k, v in expl.items() if k != "context"} if s.explanation else None,
+                    "interpretation": s.interpretation})
+        if profile_row is not None:
+            out["profile"] = {"id": profile_row.id, "version": profile_row.version, "created_at": profile_row.created_at.isoformat(), "spec": complete_spec(profile_row.spec)}
     return out
 
 
@@ -212,7 +240,7 @@ def report_content(b: Business, prow: WhatIfProfile, profile: Profile, scenarios
                        "metrics": sim["scenario"]["metrics"], "baseline_metrics": sim["baseline"]["metrics"],
                        "months": [{k: m[k] for k in ("month", "revenue", "net_profit", "cash")} for m in sim["scenario"]["months"]],
                        "baseline_months": [{k: m[k] for k in ("month", "revenue", "net_profit", "cash")} for m in sim["baseline"]["months"]],
-                       "risks": risks["scenario"], "explanation": expl, "saved_explanation": s.explanation,
+                       "risks": risks["scenario"], "explanation": expl, "saved_explanation": {k: v for k, v in (s.explanation or {}).items() if k != "context"} or None,
                        "confidence": sim["confidence"]})
     sources = [{"key": k, "label": v.get("label"), "source": v.get("source"), "kind": v.get("kind"), "status": v.get("status"),
                 "retrieved_at": v.get("retrieved_at"), "url": v.get("source_url"), "summary": v.get("summary")} for k, v in signals.items()]
@@ -318,16 +346,20 @@ DEMO_SCENARIOS = [
 
 
 def create_scenario(db: Session, b: Business, prow: WhatIfProfile, profile: Profile, name: str, question: str, levers: Levers,
-                    interpretation: dict | None, origin: str, signals: dict, with_ai: bool = False) -> WhatIfScenario:
+                    interpretation: dict | None, origin: str, signals: dict, with_ai: bool = False, client_key: str | None = None,
+                    source_scenario_id: int | None = None) -> WhatIfScenario:
     origin_map = {}
     if interpretation and interpretation.get("mode") == "ai":
         origin_map = {r["lever"].split(".")[0]: ("ai" if r.get("source") == "assumed" else "stated") for r in interpretation.get("recognized", [])}
     elif interpretation:
         origin_map = {r["lever"].split(".")[0]: ("assumed" if r.get("source") == "assumed" else "stated") for r in interpretation.get("recognized", [])}
+    t0 = time.perf_counter()
     sim, risks = run(profile, levers, signals, origin_map)
+    calc_ms = round((time.perf_counter() - t0) * 1000, 1)
     expl = ai.explain(sim, risks["scenario"], profile) if with_ai else ai.calculation_explanation(sim, risks["scenario"], profile.business.currency, profile.unit_label)
     s = WhatIfScenario(business_id=b.id, profile_id=prow.id, name=name[:160] or "Scenario", question=question, levers=sim["levers"],
-                       interpretation=interpretation, result=sim, risks=risks, explanation=engine.round_result(expl), origin=origin)
+                       interpretation=interpretation, result=sim, risks=risks, explanation=engine.round_result(expl), origin=origin,
+                       client_key=client_key, calc_ms=calc_ms, source_scenario_id=source_scenario_id)
     db.add(s)
     db.flush()
     return s

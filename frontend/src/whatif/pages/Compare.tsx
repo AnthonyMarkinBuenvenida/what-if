@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/hooks";
 import { useWorkspace } from "../../app/workspace";
@@ -34,7 +34,10 @@ export default function Compare() {
   const toast = useToast();
   const setBackdrop = useBackdropState();
   const list = useAsync<ScenarioSummary[]>(() => (current && prof.profile ? api.get(`/api/whatif/businesses/${current.id}/scenarios`) : Promise.resolve([])), [current?.id, prof.profile?.id]);
-  const [sel, setSel] = useState<number[]>([]);
+  const [params] = useSearchParams();
+  // ?ids=1,2 (from History or the simulator) chooses the scenarios to compare.
+  const fromLink = (params.get("ids") ?? "").split(",").map(Number).filter((n) => Number.isInteger(n) && n > 0);
+  const [sel, setSel] = useState<number[]>(fromLink);
   const [baseline, setBaseline] = useState(true);
   const [objective, setObjective] = useState("max_profit");
   const [horizon, setHorizon] = useState(12);
@@ -44,7 +47,11 @@ export default function Compare() {
   const [lines, setLines] = useState<(number | null)[]>([]);
 
   const scenarios = (list.data ?? []).filter((s) => !s.summary.is_baseline);
-  useEffect(() => { if (scenarios.length && !sel.length) setSel(scenarios.slice(0, 4).map((s) => s.id)); }, [list.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!scenarios.length) return;
+    const known = sel.filter((id) => scenarios.some((s) => s.id === id));
+    if (known.length !== sel.length || !sel.length) setSel(known.length ? known : scenarios.slice(0, 4).map((s) => s.id));
+  }, [list.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!current || (!prof.loading && !prof.profile)) return <div className="grid gap-6"><PageTitle title="Compare scenarios" /><NeedsProfile state={prof} /></div>;
   if (list.error) return <ErrorBox message={list.error} onRetry={list.reload} />;

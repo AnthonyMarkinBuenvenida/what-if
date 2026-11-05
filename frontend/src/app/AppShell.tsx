@@ -7,6 +7,7 @@ import {
   IconSettings, IconSidebar, IconStore, IconTwin, IconX, IconAlert,
 } from "../components/icons";
 import { ErrorBox, Spinner } from "../components/ui";
+import { PageBoundary } from "../components/PageBoundary";
 import { useLocalState, useReduced } from "../lib/hooks";
 import { Backdrop, type BackdropContext } from "../whatif/backdrop/Backdrop";
 import { KindTag } from "../whatif/ui";
@@ -17,6 +18,7 @@ type Item = { to: string; label: string; icon: ComponentType<{ size?: number }>;
 const PRIMARY: Item[] = [
   { to: "/app", label: "Dashboard", icon: IconOverview, end: true },
   { to: "/app/simulate", label: "Simulate", icon: IconPlay },
+  { to: "/app/history", label: "History", icon: IconLoop },
   { to: "/app/risk", label: "Risk Radar", icon: IconAlert },
   { to: "/app/compare", label: "Compare", icon: IconFork },
   { to: "/app/reports", label: "Reports", icon: IconReport },
@@ -169,7 +171,7 @@ function ShellInner() {
           <AnimatePresence mode="wait">
             <motion.main key={loc.pathname} className="mx-auto max-w-[1320px] px-4 pb-24 pt-6 sm:px-6 lg:px-10 lg:pt-9"
               initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={reduced ? undefined : { opacity: 0 }} transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}>
-              <Outlet />
+              <PageBoundary key={loc.pathname}><Outlet /></PageBoundary>
             </motion.main>
           </AnimatePresence>
         </div>

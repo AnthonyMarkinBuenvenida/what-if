@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/hooks";
 import { useWorkspace } from "../../app/workspace";
@@ -22,10 +22,14 @@ export default function Setup() {
   const prof = useProfile(current?.id);
   const isNew = params.get("new") === "1" || (!prof.loading && !prof.profile && !current);
   const cat = useAsync(() => api.get<{ industries: IndustryInfo[] }>("/api/whatif/industries"), []);
-  if (cat.error) return <ErrorBox message={cat.error} onRetry={cat.reload} />;
-  if (!cat.data || prof.loading) return <div className="grid gap-4"><Skeleton h={60} w="40%" /><Skeleton h={400} /></div>;
+  if (cat.error) return <ErrorBox message={`The industry list could not be loaded: ${cat.error}`} onRetry={cat.reload} />;
+  if (!cat.data || (prof.loading && !isNew)) return <div className="grid gap-4"><Skeleton h={60} w="40%" /><Skeleton h={400} /></div>;
+  // A failed profile request is an error to show, not a reason to offer "create a business".
+  if (prof.error && !isNew) return <div className="grid gap-6"><PageTitle title="Business setup" /><ErrorBox message={`This business's figures could not be loaded: ${prof.error}`} onRetry={prof.reload} /></div>;
   if (isNew || !prof.profile) return <NewBusiness industries={cat.data.industries} />;
-  return <Editor key={prof.profile.id} row={prof.profile} industry={cat.data.industries.find((i) => i.id === prof.profile!.spec.industry)!} onSaved={prof.reload} businessId={current!.id} />;
+  const industry = cat.data.industries.find((i) => i.id === prof.profile!.spec.industry);
+  if (!industry) return <div className="grid gap-6"><PageTitle title="Business setup" /><ErrorBox message={`This business uses an industry What-if does not know (“${prof.profile.spec.industry}”).`} onRetry={prof.reload} /></div>;
+  return <Editor key={prof.profile.id} row={prof.profile} industry={industry} onSaved={prof.reload} businessId={current!.id} />;
 }
 
 function NewBusiness({ industries }: { industries: IndustryInfo[] }) {
@@ -117,7 +121,7 @@ function Editor({ row, industry, onSaved, businessId }: { row: ProfileRow; indus
   return (
     <div className="grid gap-8">
       <PageTitle title="Business setup" sub={<>Profile version {row.version} of <b className="text-text">{spec.business.name}</b> ({industry.label}). Saving creates a new version; saved scenarios keep the version they were calculated on.</>}
-        actions={<button className="btn btn-primary" onClick={save} disabled={busy || !dirty}>{busy && <Spinner />}{dirty ? "Save changes" : "Saved"}</button>} />
+        actions={<><Link to="/app/setup?new=1" className="btn btn-outline"><IconPlus size={15} />Add another business</Link><button className="btn btn-primary" onClick={save} disabled={busy || !dirty}>{busy && <Spinner />}{dirty ? "Save changes" : "Saved"}</button></>} />
       {estimates > 0 && <div className="panel flex flex-wrap items-center gap-2 border-dashed p-3 text-[0.88rem]"><KindTag kind="estimate" />{estimates} values are still What-if estimates. Replace them with your own figures; edited values are marked <SourceBadge s="user" />.</div>}
       {row.validation.issues.length > 0 && (
         <ul className="grid gap-1 text-[0.86rem]">{row.validation.issues.map((i) => <li key={i.code + i.path} className={i.severity === "warning" ? "text-[var(--sev-moderate)]" : "text-text-2"}>{i.severity === "warning" ? "⚠ " : "• "}{i.message}</li>)}</ul>

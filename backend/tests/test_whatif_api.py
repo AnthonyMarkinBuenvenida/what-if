@@ -68,12 +68,15 @@ def test_full_workflow(client):
     s2 = client.post(f"/api/whatif/businesses/{bid}/scenarios", headers=H, json={"name": "Price -10%", "levers": {"price_change_pct": -10}}).json()
     lst = client.get(f"/api/whatif/businesses/{bid}/scenarios").json()
     assert {x["id"] for x in lst} >= {s1["id"], s2["id"]}
-    assert client.post(f"/api/whatif/scenarios/{s1['id']}/rerun", headers=H).json()["profile_id"] == p2["id"]
+    # Recalculating creates a new record linked to the original; the original snapshot is not overwritten.
+    re = client.post(f"/api/whatif/scenarios/{s1['id']}/rerun", headers=H).json()
+    assert re["profile_id"] == p2["id"] and re["source_scenario_id"] == s1["id"] and re["id"] != s1["id"]
+    assert client.get(f"/api/whatif/scenarios/{s1['id']}").json()["result"] == s1["result"]
 
     # Risk Radar recalculated for baseline + scenarios, with links back to scenarios
     rr = client.get(f"/api/whatif/businesses/{bid}/risk").json()
-    assert rr["baseline"]["findings"] is not None and len(rr["scenarios"]) == 2
-    assert all(f["scenario_id"] in (s1["id"], s2["id"]) for sc in rr["scenarios"] for f in sc["findings"])
+    assert rr["baseline"]["findings"] is not None and len(rr["scenarios"]) == 3
+    assert all(f["scenario_id"] in (s1["id"], s2["id"], re["id"]) for sc in rr["scenarios"] for f in sc["findings"])
     assert rr["rules"]
 
     # Compare: consistent with individual simulations on the same period

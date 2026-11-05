@@ -11,13 +11,16 @@ from collections import defaultdict, deque
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
+from typing import Literal
+
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..agents.llm import llm
 from ..auth import current_workspace
-from ..db import get_db
+from ..db import db_health, get_db
 from ..models import Business, ModelVersion, WhatIfProfile, WhatIfReport, WhatIfRiskAssessment, WhatIfScenario, WhatIfSignal, Workspace
 from ..services import audit, business_out, owned_business
 from ..sources import open_meteo
@@ -222,6 +225,19 @@ class ScenarioIn(BaseModel):
     levers: dict = Field(default_factory=dict)
     interpretation: dict | None = None
     explanation: dict | None = None
+    # A key the browser creates once per completed run: retries and repeated clicks return the same record.
+    client_key: str | None = Field(None, min_length=8, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+    origin: Literal["user", "auto"] = "user"
+
+
+def _profile_row(db: Session, s: WhatIfScenario) -> WhatIfProfile | None:
+    return db.get(WhatIfProfile, s.profile_id)
+
+
+def _by_client_key(db: Session, b: Business, key: str | None) -> WhatIfScenario | None:
+    if not key:
+        return None
+    return db.scalars(select(WhatIfScenario).where(WhatIfScenario.business_id == b.id, WhatIfScenario.client_key == key)).first()
 
 
 @router.get("/businesses/{business_id}/scenarios")
@@ -233,21 +249,70 @@ def list_scenarios(business_id: int, ws: Workspace = Depends(current_workspace),
 
 @router.post("/businesses/{business_id}/scenarios")
 def save_scenario(business_id: int, data: ScenarioIn, ws: Workspace = Depends(current_workspace), db: Session = Depends(get_db)):
+    """Save a completed simulation (the browser calls this automatically after every successful run).
+    The result is recalculated here from the same profile version and levers, stored in one transaction,
+    and returned only after the commit, so "Saved" in the browser means the database has the record."""
     b = owned_business(db, ws, business_id)
+    existing = _by_client_key(db, b, data.client_key)
+    if existing is not None:
+        return service.scenario_out(existing, full=True, profile_row=_profile_row(db, existing)) | {"duplicate_request": True}
     prow, profile = service.require_profile(db, b)
     s = service.create_scenario(db, b, prow, profile, data.name.strip(), data.question, service.parse_levers(data.levers),
-                                data.interpretation, "user", service.latest_signals(db, b))
+                                data.interpretation, data.origin, service.latest_signals(db, b), client_key=data.client_key)
     if data.explanation and data.explanation.get("mode") == "ai":
         s.explanation = data.explanation  # keep the AI explanation the user saw (already grounding-checked)
-    audit(db, b.id, "user", "whatif.scenario_saved", f"Saved scenario '{s.name}'.", {"scenario_id": s.id}, ws.id)
-    db.commit()
-    return service.scenario_out(s, full=True)
+    s.opened_at = service.now()
+    audit(db, b.id, "user", "whatif.scenario_saved", f"Saved scenario '{s.name}' ({data.origin}).", {"scenario_id": s.id}, ws.id)
+    try:
+        db.commit()
+    except IntegrityError:  # the same client_key arrived twice at once: return the record the first request stored
+        db.rollback()
+        existing = _by_client_key(db, b, data.client_key)
+        if existing is None:
+            raise
+        return service.scenario_out(existing, full=True, profile_row=_profile_row(db, existing)) | {"duplicate_request": True}
+    return service.scenario_out(s, full=True, profile_row=prow)
+
+
+@router.get("/businesses/{business_id}/scenarios/latest")
+def latest_scenario(business_id: int, ws: Workspace = Depends(current_workspace), db: Session = Depends(get_db)):
+    """The saved simulation the user looked at last (or the newest), to restore the simulator after a restart."""
+    b = owned_business(db, ws, business_id)
+    s = db.scalars(select(WhatIfScenario).where(WhatIfScenario.business_id == b.id)
+                   .order_by(func.coalesce(WhatIfScenario.opened_at, WhatIfScenario.created_at).desc(), WhatIfScenario.id.desc()).limit(1)).first()
+    return {"scenario": service.scenario_out(s) if s else None}
+
+
+@router.get("/history")
+def history(q: str = "", business_id: int | None = None, origin: str | None = None, sort: str = "created", order: str = "desc",
+            limit: int = 200, ws: Workspace = Depends(current_workspace), db: Session = Depends(get_db)):
+    """Every saved simulation in this workspace, newest first, with its business."""
+    businesses = {b.id: b for b in db.scalars(select(Business).where(Business.user_id == ws.id)).all()}
+    if business_id is not None and business_id not in businesses:
+        raise HTTPException(404, "Business not found.")
+    ids = [business_id] if business_id is not None else list(businesses)
+    stmt = select(WhatIfScenario).where(WhatIfScenario.business_id.in_(ids or [-1]))
+    if q.strip():
+        like = f"%{q.strip()[:80]}%"
+        stmt = stmt.where(WhatIfScenario.name.ilike(like) | WhatIfScenario.question.ilike(like))
+    if origin in ("auto", "user", "demo"):
+        stmt = stmt.where(WhatIfScenario.origin == origin)
+    rows = db.scalars(stmt.order_by(WhatIfScenario.created_at.desc()).limit(max(1, min(500, limit)))).all()
+    out = [service.scenario_out(s) | {"business_name": businesses[s.business_id].name} for s in rows]
+    keys = {"created": lambda r: r["created_at"], "name": lambda r: r["name"].lower(), "business": lambda r: (r["business_name"].lower(), r["created_at"]),
+            "profit": lambda r: (r["summary"]["net_profit"] is None, r["summary"]["net_profit"] or 0)}
+    out.sort(key=keys.get(sort, keys["created"]), reverse=(order == "desc"))
+    return {"scenarios": out, "businesses": [{"id": b.id, "name": b.name} for b in businesses.values()], "storage": db_health()}
 
 
 @router.get("/scenarios/{scenario_id}")
-def get_scenario(scenario_id: int, ws: Workspace = Depends(current_workspace), db: Session = Depends(get_db)):
+def get_scenario(scenario_id: int, open: bool = False, ws: Workspace = Depends(current_workspace), db: Session = Depends(get_db)):
+    """A saved simulation exactly as it was stored (no recalculation). open=true records it as the last one viewed."""
     s, _ = _owned_scenario(db, ws, scenario_id)
-    return service.scenario_out(s, full=True)
+    if open:
+        s.opened_at = service.now()
+        db.commit()
+    return service.scenario_out(s, full=True, profile_row=_profile_row(db, s))
 
 
 class ScenarioPatch(BaseModel):
@@ -260,34 +325,93 @@ def patch_scenario(scenario_id: int, data: ScenarioPatch, ws: Workspace = Depend
     s, _ = _owned_scenario(db, ws, scenario_id)
     if data.name is not None:
         s.name = data.name.strip()
+        if s.origin == "auto":
+            s.origin = "user"  # a named run is a scenario the user chose to keep
     if data.pinned is not None:
         s.pinned = data.pinned
     db.commit()
     return service.scenario_out(s)
 
 
+class DuplicateIn(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=160)
+
+
+@router.post("/scenarios/{scenario_id}/duplicate")
+def duplicate_scenario(scenario_id: int, data: DuplicateIn, ws: Workspace = Depends(current_workspace), db: Session = Depends(get_db)):
+    """An exact copy of the saved record (same inputs, results, risks and explanation), linked to its source."""
+    s, b = _owned_scenario(db, ws, scenario_id)
+    copy = WhatIfScenario(business_id=s.business_id, profile_id=s.profile_id, name=(data.name or f"{s.name} (copy)")[:160], question=s.question,
+                          levers=s.levers, interpretation=s.interpretation, result=s.result, risks=s.risks, explanation=s.explanation,
+                          origin="user", calc_ms=s.calc_ms, source_scenario_id=s.id)
+    db.add(copy)
+    db.flush()
+    audit(db, b.id, "user", "whatif.scenario_duplicated", f"Duplicated '{s.name}'.", {"scenario_id": copy.id, "source": s.id}, ws.id)
+    db.commit()
+    return service.scenario_out(copy, full=True, profile_row=_profile_row(db, copy))
+
+
 @router.delete("/scenarios/{scenario_id}")
 def delete_scenario(scenario_id: int, ws: Workspace = Depends(current_workspace), db: Session = Depends(get_db)):
     s, b = _owned_scenario(db, ws, scenario_id)
     audit(db, b.id, "user", "whatif.scenario_deleted", f"Deleted scenario '{s.name}'.", {}, ws.id)
+    for a in db.scalars(select(WhatIfRiskAssessment).where(WhatIfRiskAssessment.business_id == b.id, WhatIfRiskAssessment.scope == f"scenario:{s.id}")).all():
+        db.delete(a)
     db.delete(s)
     db.commit()
     return {"ok": True}
 
 
+class ScenarioExplainIn(BaseModel):
+    refresh: bool = False
+
+
+@router.post("/scenarios/{scenario_id}/explain")
+def explain_saved(scenario_id: int, data: ScenarioExplainIn, ws: Workspace = Depends(current_workspace), db: Session = Depends(get_db)):
+    """Explain a saved simulation from its stored result and the profile version it was calculated with, and store
+    the explanation on the record. An existing AI explanation is returned unless refresh is set."""
+    s, b = _owned_scenario(db, ws, scenario_id)
+    if s.explanation and s.explanation.get("mode") == "ai" and s.explanation.get("chart_notes") and not data.refresh:
+        return {k: v for k, v in s.explanation.items() if k != "context"} | {"cached": True}
+    prow = _profile_row(db, s)
+    if prow is None:
+        raise HTTPException(409, "The business profile this simulation was calculated with is no longer available.")
+    profile = service.parse_profile(prow.spec)
+    t0 = time.perf_counter()
+    expl = engine.round_result(ai.explain(s.result, (s.risks or {}).get("scenario") or {}, profile))
+    expl["ai_ms"] = round((time.perf_counter() - t0) * 1000, 1)
+    # Keep an AI explanation already stored if this attempt fell back to rules (e.g. the daily AI quota is used up).
+    if expl.get("mode") == "ai" or not (s.explanation or {}).get("mode") == "ai":
+        s.explanation = expl
+        db.commit()
+    else:
+        return {k: v for k, v in s.explanation.items() if k != "context"} | {"cached": True, "notice": expl.get("notice")}
+    return {k: v for k, v in expl.items() if k != "context"}
+
+
 @router.post("/scenarios/{scenario_id}/rerun")
 def rerun(scenario_id: int, ws: Workspace = Depends(current_workspace), db: Session = Depends(get_db)):
-    """Recalculate a saved scenario on the current business profile (keeps the same levers)."""
+    """Recalculate a saved scenario on the current business profile as a NEW record; the original stays as it was."""
     s, b = _owned_scenario(db, ws, scenario_id)
     prow, profile = service.require_profile(db, b)
-    sim, risks = service.run(profile, service.parse_levers(s.levers), service.latest_signals(db, b))
-    s.result, s.risks, s.profile_id = sim, risks, prow.id
-    s.explanation = engine.round_result(ai.calculation_explanation(sim, risks["scenario"], profile.business.currency, profile.unit_label))
+    new = service.create_scenario(db, b, prow, profile, f"{s.name} (recalculated)", s.question, service.parse_levers(s.levers),
+                                  s.interpretation, "user", service.latest_signals(db, b), source_scenario_id=s.id)
     db.commit()
-    return service.scenario_out(s, full=True)
+    return service.scenario_out(new, full=True, profile_row=prow)
 
 
 # ------------------------------------------------------------------ risk
+
+AUTO_RUNS_IN_RADAR = 5
+
+
+def _financials(projection: dict) -> dict:
+    """Headline figures for one projection, from the engine (the same figures the dashboard and simulator use)."""
+    t, m = projection["totals"], projection["metrics"]
+    return {"horizon_months": projection["horizon_months"], "revenue": t["revenue"], "total_expenses": t["variable_costs"] + t["operating_expenses"] + t["tax"],
+            "gross_profit": t["gross_profit"], "net_profit": t["net_profit"], "net_margin": m["net_margin"], "break_even_units": m["break_even_units"],
+            "units_per_month": projection["monthly_avg"]["units"]}
+
 
 @router.get("/businesses/{business_id}/risk")
 def risk_radar(business_id: int, horizon_months: int = 12, ws: Workspace = Depends(current_workspace), db: Session = Depends(get_db)):
@@ -298,21 +422,34 @@ def risk_radar(business_id: int, horizon_months: int = 12, ws: Workspace = Depen
     horizon = max(1, min(36, horizon_months))
     base_sim, base_r = service.run(profile, Levers(horizon_months=horizon), sig)
     scen = []
-    for s in db.scalars(select(WhatIfScenario).where(WhatIfScenario.business_id == b.id).order_by(WhatIfScenario.created_at.desc())).all():
+    # Named and demo scenarios, plus the most recent automatic runs; older automatic runs stay in History.
+    rows = db.scalars(select(WhatIfScenario).where(WhatIfScenario.business_id == b.id).order_by(WhatIfScenario.created_at.desc())).all()
+    autos = [s for s in rows if s.origin == "auto"]
+    versions = dict(db.execute(select(WhatIfProfile.id, WhatIfProfile.version).where(WhatIfProfile.business_id == b.id)).all())
+    rows = [s for s in rows if s.origin != "auto" or s in autos[:AUTO_RUNS_IN_RADAR]]
+    for s in rows:
         if not s.levers or Levers.model_validate(s.levers).is_baseline():
             continue
         sim, r = service.run(profile, service.parse_levers(s.levers), sig)
         for f in r["scenario"]["findings"]:
             f["scenario_id"], f["scenario_name"], f["created_at"] = s.id, s.name, s.created_at.isoformat()
-        scen.append({"id": s.id, "name": s.name, "levers": s.levers, "created_at": s.created_at.isoformat(), "score": r["scenario"]["score"],
-                     "level": r["scenario"]["level"], "counts": r["scenario"]["counts"], "findings": r["scenario"]["findings"],
-                     "net_profit": sim["scenario"]["totals"]["net_profit"]})
+        # The page recalculates on today's figures; the assessment stored with the scenario is returned beside it,
+        # so a changed business profile never silently replaces what the scenario was saved with.
+        saved = (s.risks or {}).get("scenario") or {}
+        scen.append({"id": s.id, "name": s.name, "levers": s.levers, "created_at": s.created_at.isoformat(), "origin": s.origin,
+                     "score": r["scenario"]["score"], "level": r["scenario"]["level"], "counts": r["scenario"]["counts"], "findings": r["scenario"]["findings"],
+                     "net_profit": sim["scenario"]["totals"]["net_profit"], "financials": _financials(sim["scenario"]),
+                     "saved": {"level": saved.get("level"), "score": saved.get("score"), "counts": saved.get("counts"),
+                               "net_profit": ((s.result or {}).get("scenario") or {}).get("totals", {}).get("net_profit"),
+                               "profile_version": versions.get(s.profile_id), "computed_at": (s.result or {}).get("computed_at")},
+                     "inputs_changed": s.profile_id != prow.id})
     for f in base_r["baseline"]["findings"]:
         f["scenario_id"], f["scenario_name"], f["created_at"] = None, "Current course", prow.created_at.isoformat()
     return {"computed_at": base_sim["computed_at"], "profile_version": prow.version, "horizon_months": horizon,
-            "currency": profile.business.currency, "baseline": base_r["baseline"], "scenarios": scen,
+            "currency": profile.business.currency, "unit_label": profile.unit_label, "baseline": base_r["baseline"], "baseline_financials": _financials(base_sim["baseline"]),
+            "scenarios": scen,
             "signals": {k: {kk: v.get(kk) for kk in ("label", "source", "kind", "status", "summary", "retrieved_at", "reason")} for k, v in sig.items()},
-            "rules": risk.rules_catalog(), "categories": risk.CATEGORIES}
+            "rules": risk.rules_catalog(), "categories": risk.CATEGORIES, "older_automatic_runs": max(0, len(autos) - AUTO_RUNS_IN_RADAR)}
 
 
 class AssessmentIn(BaseModel):

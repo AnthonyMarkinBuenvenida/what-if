@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { api } from "../../lib/api";
@@ -7,11 +7,11 @@ import { useWorkspace } from "../../app/workspace";
 import { useBackdropState } from "../../app/AppShell";
 import { ErrorBox, Spinner, useToast } from "../../components/ui";
 import { IconPlay, IconPlus, IconRetry, IconTrash, IconCheck } from "../../components/icons";
-import { BridgeChart, ProjectionChart } from "../charts";
-import { compact, describeLevers, money, monthLabel, num, pct, signedMoney, signedPct, signedPts } from "../format";
-import type { Explanation, Interpretation, Levers, ProfileSpec, RiskReport, ScenarioFull, SimResult } from "../types";
-import { DataLinks, ExternalData } from "../ExternalData";
-import { ConfidenceMeter, Delta, KindTag, Kpi, NeedsProfile, PageTitle, Section, SeverityBadge, SourceBadge, Spark, useProfile } from "../ui";
+import { describeLevers, money, num } from "../format";
+import type { Explanation, Interpretation, Levers, ProfileSpec, RiskReport, ScenarioFull, ScenarioSummary, SimResult } from "../types";
+import { ExternalData } from "../ExternalData";
+import { Results } from "../ResultsView";
+import { KindTag, NeedsProfile, PageTitle, SourceBadge, useProfile } from "../ui";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const clean = (l: Levers): Levers => JSON.parse(JSON.stringify(l, (_k, v) => (v === undefined ? undefined : v)));
@@ -25,6 +25,11 @@ export default function Simulate() {
   if (!current || !prof.profile) return <div className="grid gap-6"><PageTitle title="Simulate a decision" /><NeedsProfile state={prof} /></div>;
   return <Workspace key={current.id} businessId={current.id} spec={prof.profile.spec} version={prof.profile.version} suggestions={prof.industry?.suggestions ?? []} elasticityNote={prof.industry?.elasticity_note} />;
 }
+
+type SaveState = "idle" | "saving" | "saved" | "failed";
+interface Saved { id: number; name: string; origin: string; created_at: string; computed_at?: string }
+const PENDING = "whatif-pending-run";
+const newKey = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, "");
 
 function Workspace({ businessId, spec, version, suggestions, elasticityNote }: { businessId: number; spec: ProfileSpec; version: number; suggestions: string[]; elasticityNote?: string }) {
   const cur = spec.business.currency;
@@ -44,30 +49,53 @@ function Workspace({ businessId, spec, version, suggestions, elasticityNote }: {
   const [error, setError] = useState<string | null>(null);
   const [askAI, setAskAI] = useState(true);
   const [aiConfigured, setAiConfigured] = useState<boolean | null>(null);
-  const [saveOpen, setSaveOpen] = useState(false);
-  const [savedId, setSavedId] = useState<number | null>(null);
+  const [nameOpen, setNameOpen] = useState<"rename" | "copy" | null>(null);
+  const [saved, setSaved] = useState<Saved | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [pendingSave, setPendingSave] = useState<{ key: string; levers: Levers; name: string } | null>(null);
+  const [restored, setRestored] = useState<Saved | null>(null);
+  const [interrupted, setInterrupted] = useState<string | null>(null);
   const names = useMemo(() => Object.fromEntries(spec.products.map((p) => [p.id, p.name])), [spec]);
   const stale = res != null && ranKey !== key(levers);
+  // Once the user types, reads a question, changes a control or runs, the background restore must not replace their work.
+  const touched = useRef(false);
+  const touch = () => { touched.current = true; };
+  const editLevers = (l: Levers) => { touch(); setLevers(l); };
 
   useEffect(() => { api.get<{ ai: { configured: boolean } }>("/api/whatif/status").then((s) => setAiConfigured(s.ai.configured)).catch(() => setAiConfigured(false)); }, []);
   useEffect(() => { setBackdrop({ levers: res ? res.result.levers : null }); }, [res, setBackdrop]);
 
-  // Deep links: ?scenario=ID, ?levers=<json>, ?q=question
+  /** Show a saved simulation exactly as stored (no recalculation) and remember it as the last one viewed. */
+  const openSaved = async (id: number, restoredView = false) => {
+    const s = await api.get<ScenarioFull>(`/api/whatif/scenarios/${id}?open=true`);
+    if (restoredView && touched.current) return;
+    const l = { ...s.levers, start_month: null };
+    setLevers(l);
+    setQuestion(s.question);
+    setInterp(s.interpretation);
+    setRes({ result: s.result, risks: s.risks, explanation: s.explanation!, calc_ms: s.calc_ms ?? 0, profile_version: s.profile?.version ?? version });
+    setExpl(s.explanation);
+    setRanKey(key(l));
+    setSaved({ id: s.id, name: s.name, origin: s.origin, created_at: s.created_at, computed_at: s.computed_at });
+    setSaveState("saved");
+    setRestored(restoredView ? { id: s.id, name: s.name, origin: s.origin, created_at: s.created_at } : null);
+  };
+
+  // Deep links: ?scenario=ID, ?levers=<json>, ?q=question. Without one, reopen the last saved simulation.
   useEffect(() => {
     const sid = params.get("scenario"), lv = params.get("levers"), q = params.get("q");
+    try {
+      const p = sessionStorage.getItem(PENDING);
+      if (p) { const { at } = JSON.parse(p); setInterrupted(at); sessionStorage.removeItem(PENDING); }
+    } catch { /* storage unavailable */ }
     if (sid) {
-      api.get<ScenarioFull>(`/api/whatif/scenarios/${sid}`).then((s) => {
-        const l = { ...s.levers, start_month: null };
-        setLevers(l);
-        setQuestion(s.question);
-        setInterp(s.interpretation);
-        setRes({ result: s.result, risks: s.risks, explanation: s.explanation!, calc_ms: 0, profile_version: version });
-        setExpl(s.explanation);
-        setRanKey(key(l));
-        setSavedId(s.id);
-      }).catch((e) => setError(e.message));
+      openSaved(+sid).catch((e) => setError(e.message));
     } else if (lv) {
       try { setLevers({ horizon_months: 12, ...JSON.parse(lv) }); } catch { /* ignore bad link */ }
+    } else if (!q) {
+      api.get<{ scenario: ScenarioSummary | null }>(`/api/whatif/businesses/${businessId}/scenarios/latest`)
+        .then((r) => { if (r.scenario && !touched.current) return openSaved(r.scenario.id, true); }).catch(() => { /* nothing saved yet */ });
     }
     if (q && !sid) setQuestion(q);
     if (sid || lv || q) setParams({}, { replace: true });
@@ -76,22 +104,60 @@ function Workspace({ businessId, spec, version, suggestions, elasticityNote }: {
 
   const read = async (q = question) => {
     if (q.trim().length < 3) return;
+    touch();
     setReading(true);
     setError(null);
     try {
       const r = await api.post<Interpretation>(`/api/whatif/businesses/${businessId}/interpret`, { question: q });
       setInterp(r);
       setLevers({ horizon_months: levers.horizon_months ?? 12, ...r.levers });
-      setSavedId(null);
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setReading(false); }
   };
 
+  /** Store the completed run. The same key is reused on retry, so the server never stores it twice. */
+  const save = async (p: { key: string; levers: Levers; name: string }): Promise<ScenarioFull | null> => {
+    setSaveState("saving");
+    setSaveError(null);
+    setPendingSave(p);
+    try {
+      const s = await api.post<ScenarioFull>(`/api/whatif/businesses/${businessId}/scenarios`,
+        { name: p.name, question, levers: p.levers, interpretation: interp, client_key: p.key, origin: "auto" });
+      setSaved({ id: s.id, name: s.name, origin: s.origin, created_at: s.created_at, computed_at: s.computed_at });
+      // Show exactly what was stored (same inputs, recalculated identically on the server).
+      setRes((prev) => ({ result: s.result, risks: s.risks, explanation: s.explanation!, calc_ms: s.calc_ms ?? prev?.calc_ms ?? 0, profile_version: s.profile?.version ?? version }));
+      setExpl((e) => (e?.mode === "ai" ? e : s.explanation));
+      setSaveState("saved");
+      setPendingSave(null);
+      try { sessionStorage.removeItem(PENDING); } catch { /* storage unavailable */ }
+      return s;
+    } catch (e) {
+      setSaveState("failed");
+      setSaveError(e instanceof Error ? e.message : String(e));
+      return null;
+    }
+  };
+
+  const explain = async (s: ScenarioFull | null, lv: Levers, fallback: Explanation, refresh = false) => {
+    setExplaining(true);
+    try {
+      setExpl(s ? await api.post<Explanation>(`/api/whatif/scenarios/${s.id}/explain`, { refresh })
+        : await api.post<Explanation>(`/api/whatif/businesses/${businessId}/explain`, { levers: lv }));
+    } catch (e) { setExpl({ ...fallback, notice: `The AI explanation failed (${e instanceof Error ? e.message : e}). This explanation was written from the calculation.` }); }
+    finally { setExplaining(false); }
+  };
+
   const run = async () => {
+    touch();
     setRunning(true);
     setError(null);
     setExpl(null);
-    setSavedId(null);
+    setSaved(null);
+    setRestored(null);
+    setInterrupted(null);
+    setSaveState("idle");
     const lv = clean(levers);
+    const ck = newKey();
+    try { sessionStorage.setItem(PENDING, JSON.stringify({ at: new Date().toISOString() })); } catch { /* storage unavailable */ }
     setBackdrop({ active: true, levers: lv });
     try {
       const r = await api.post<SimResponse>(`/api/whatif/businesses/${businessId}/simulate`, { levers: lv });
@@ -100,16 +166,14 @@ function Workspace({ businessId, spec, version, suggestions, elasticityNote }: {
       setExpl(r.explanation);
       setRunning(false);
       setBackdrop({ active: false });
-      if (askAI && aiConfigured) {
-        setExplaining(true);
-        try { setExpl(await api.post<Explanation>(`/api/whatif/businesses/${businessId}/explain`, { levers: lv })); }
-        catch (e) { setExpl({ ...r.explanation, notice: `The AI explanation failed (${e instanceof Error ? e.message : e}). This explanation was written from the calculation.` }); }
-        finally { setExplaining(false); }
-      }
+      const name = interp?.name || describeLevers(r.result.levers, cur, names).slice(0, 2).join(", ") || "Current course";
+      const s = await save({ key: ck, levers: lv, name });
+      if (askAI && aiConfigured) await explain(s, lv, (s?.explanation ?? r.explanation));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setRunning(false);
       setBackdrop({ active: false });
+      try { sessionStorage.removeItem(PENDING); } catch { /* storage unavailable */ }
     }
   };
 
@@ -117,28 +181,35 @@ function Workspace({ businessId, spec, version, suggestions, elasticityNote }: {
     setLevers({ horizon_months: levers.horizon_months ?? 12 });
     setInterp(null);
     setQuestion("");
-    setSavedId(null);
   };
 
   const steps: { label: string; state: "done" | "active" | "idle" | "skip" }[] = [
     { label: "Read the question", state: reading ? "active" : interp ? "done" : "skip" },
     { label: "Calculate projections and risks", state: running ? "active" : res && !stale ? "done" : "idle" },
+    { label: "Save to your history", state: saveState === "saving" ? "active" : saveState === "saved" && !stale ? "done" : "idle" },
     { label: aiConfigured ? "AI explanation" : "Explanation from the calculation", state: explaining ? "active" : expl && !stale && !running ? "done" : "idle" },
   ];
 
   return (
     <div className="grid gap-6">
       <PageTitle title="Simulate a decision"
-        sub={<>Describe a decision or change the controls, then run it against <b className="text-text">{spec.business.name}</b> (profile v{version}). Results are calculated; nothing is a guarantee.</>}
-        actions={<Link to="/app/setup" className="btn btn-outline btn-sm">Edit business figures</Link>} />
+        sub={<>Describe a decision or change the controls, then run it against <b className="text-text">{spec.business.name}</b> (profile v{version}). Every run is saved to your history automatically. Results are calculated; nothing is a guarantee.</>}
+        actions={<><Link to="/app/history" className="btn btn-outline btn-sm">History</Link><Link to="/app/setup" className="btn btn-outline btn-sm">Edit business figures</Link></>} />
 
-      <Ask question={question} setQuestion={setQuestion} onRead={read} reading={reading} suggestions={suggestions} interp={interp} cur={cur} />
+      {interrupted && (
+        <div className="panel flex flex-wrap items-center justify-between gap-2 border-dashed p-3 text-[0.86rem]" role="status">
+          <span>A simulation started {new Date(interrupted).toLocaleString()} was interrupted before it was saved, so it is not in your history. Run it again to keep it.</span>
+          <button className="btn btn-sm btn-quiet" onClick={() => setInterrupted(null)}>Dismiss</button>
+        </div>
+      )}
+
+      <Ask question={question} setQuestion={(q) => { touch(); setQuestion(q); }} onRead={read} reading={reading} suggestions={suggestions} interp={interp} cur={cur} />
       {error && <ErrorBox message={error} />}
 
       <div className="grid items-start gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
         <div className="grid gap-4 xl:sticky xl:top-20">
-          <Controls spec={spec} levers={levers} setLevers={(l) => { setLevers(l); setSavedId(null); }} names={names} elasticityNote={elasticityNote}
-            external={<ExternalData businessId={businessId} spec={spec} levers={levers} setLevers={(l) => { setLevers(l); setSavedId(null); }} />} />
+          <Controls spec={spec} levers={levers} setLevers={editLevers} names={names} elasticityNote={elasticityNote}
+            external={<ExternalData businessId={businessId} spec={spec} levers={levers} setLevers={editLevers} />} />
           <div className="panel glass grid gap-3 p-4">
             <label className="flex items-center gap-2 text-[0.85rem]">
               <input type="checkbox" checked={askAI && !!aiConfigured} disabled={!aiConfigured} onChange={(e) => setAskAI(e.target.checked)} />
@@ -158,34 +229,62 @@ function Workspace({ businessId, spec, version, suggestions, elasticityNote }: {
           {running && !res && <div className="panel grid min-h-[320px] place-items-center"><span className="think-text text-[1.1rem]">Calculating {levers.horizon_months ?? 12} months…</span></div>}
           {res && (
             <div className={`grid gap-6 ${stale || running ? "stale" : ""}`}>
+              <SaveBar saved={saved} state={saveState} error={saveError} restored={restored} stale={stale}
+                onRetry={() => pendingSave && save(pendingSave)} onName={() => setNameOpen("rename")} onCopy={() => setNameOpen("copy")} />
+              <AnimatePresence>{nameOpen && saved && (
+                <SaveForm key={nameOpen} initial={nameOpen === "copy" ? `${saved.name} (copy)` : saved.name} reduced={reduced} label={nameOpen === "copy" ? "Save a copy" : "Save name"}
+                  onCancel={() => setNameOpen(null)}
+                  onSave={async (name) => {
+                    if (nameOpen === "copy") {
+                      const c = await api.post<ScenarioFull>(`/api/whatif/scenarios/${saved.id}/duplicate`, { name });
+                      setSaved({ id: c.id, name: c.name, origin: c.origin, created_at: c.created_at, computed_at: c.computed_at });
+                      toast("Copy saved.");
+                    } else {
+                      const s = await api.patch<ScenarioSummary>(`/api/whatif/scenarios/${saved.id}`, { name });
+                      setSaved({ ...saved, name: s.name, origin: s.origin });
+                      toast("Name saved.");
+                    }
+                    setNameOpen(null);
+                  }} />
+              )}</AnimatePresence>
               {stale && !running && (
                 <div className="panel flex flex-wrap items-center justify-between gap-3 border-dashed p-3 text-[0.88rem]" role="status" style={{ opacity: 1 }}>
-                  <span>Inputs changed since this result was calculated. It shows the previous run.</span>
+                  <span>Inputs changed since this result was calculated. It shows the {saved ? "saved" : "previous"} run.</span>
                   <button className="btn btn-sm btn-signal" onClick={run}>Run again</button>
                 </div>
               )}
-              <Results res={res} expl={expl} explaining={explaining} spec={spec} onTry={(lv) => setLevers({ horizon_months: levers.horizon_months ?? 12, ...lv })} onAsk={(q) => { setQuestion(q); read(q); }} />
-              <div className="flex flex-wrap items-center gap-2">
-                {savedId ? (
-                  <><span className="chip chip-good"><IconCheck size={13} />Saved</span><Link className="btn btn-sm btn-outline" to="/app/compare">Compare scenarios</Link><Link className="btn btn-sm btn-outline" to="/app/risk">Open Risk Radar</Link></>
-                ) : (
-                  <button className="btn btn-primary" disabled={stale || running} onClick={() => setSaveOpen(true)}><IconPlus size={15} />Save scenario</button>
-                )}
-              </div>
-              <AnimatePresence>{saveOpen && (
-                <SaveForm initial={interp?.name || describeLevers(res.result.levers, cur, names).slice(0, 2).join(", ") || "Current course"} reduced={reduced}
-                  onCancel={() => setSaveOpen(false)}
-                  onSave={async (name) => {
-                    const s = await api.post<ScenarioFull>(`/api/whatif/businesses/${businessId}/scenarios`, { name, question, levers: clean(levers), interpretation: interp, explanation: expl });
-                    setSavedId(s.id);
-                    setSaveOpen(false);
-                    toast("Scenario saved.");
-                  }} />
-              )}</AnimatePresence>
+              <Results scenarioId={saved?.id} res={res} expl={expl} explaining={explaining} spec={spec} aiAvailable={!!aiConfigured}
+                onTry={(lv) => editLevers({ horizon_months: levers.horizon_months ?? 12, ...lv })} onAsk={(q) => { setQuestion(q); read(q); }}
+                onRefreshAI={saved ? () => explain({ id: saved.id } as ScenarioFull, clean(levers), expl ?? res.explanation, true) : undefined} />
+              {saved && <div className="flex flex-wrap items-center gap-2"><Link className="btn btn-sm btn-outline" to={`/app/compare?ids=${saved.id}`}>Compare with other scenarios</Link><Link className="btn btn-sm btn-outline" to={`/app/risk?scenario=${saved.id}`}>Open Risk Radar for this scenario</Link></div>}
             </div>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Where this result lives: its saved name and time, the save status (only "Saved" once the database confirmed it), and naming. */
+function SaveBar({ saved, state, error, restored, stale, onRetry, onName, onCopy }: {
+  saved: Saved | null; state: SaveState; error: string | null; restored: Saved | null; stale: boolean; onRetry: () => void; onName: () => void; onCopy: () => void;
+}) {
+  return (
+    <div className="panel glass flex flex-wrap items-center justify-between gap-3 px-4 py-3" data-testid="save-bar">
+      <div className="grid min-w-0 gap-0.5">
+        <span className="truncate font-semibold">{saved?.name ?? "New simulation"}</span>
+        <span className="text-[0.78rem] text-text-3">
+          {restored ? <>Restored from your history · saved {new Date(restored.created_at).toLocaleString()}</> : saved ? <>Saved {new Date(saved.created_at).toLocaleString()}{saved.origin === "auto" ? " · automatic" : ""}</> : "Not saved yet"}
+          {stale && saved ? " · inputs changed since" : ""}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2" aria-live="polite">
+        {state === "saving" && <span className="chip"><Spinner size={12} />Saving…</span>}
+        {state === "saved" && <span className="chip chip-good" data-testid="save-status"><IconCheck size={13} />Saved</span>}
+        {state === "failed" && <><span className="chip chip-bad" data-testid="save-status">Save failed</span><button className="btn btn-sm btn-primary" onClick={onRetry}>Retry</button></>}
+        {state === "saved" && saved && <><button className="btn btn-sm btn-outline" onClick={onName}>{saved.origin === "auto" ? "Name this scenario" : "Rename"}</button><button className="btn btn-sm btn-quiet" onClick={onCopy}>Save a copy</button></>}
+      </div>
+      {state === "failed" && error && <p className="error-text w-full text-[0.8rem]">{error} The result is still shown here, but it is not in your history until it saves.</p>}
     </div>
   );
 }
@@ -228,7 +327,7 @@ function Ask({ question, setQuestion, onRead, reading, suggestions, interp, cur 
       </form>
       {!interp && (
         <div className="flex flex-wrap gap-1.5">
-          {suggestions.map((s) => <button key={s} className="chip interactive cursor-pointer" onClick={() => { setQuestion(s); onRead(s); }}>{s}</button>)}
+          {suggestions.map((s) => <button key={s} className="chip interactive max-w-full cursor-pointer whitespace-normal text-left" onClick={() => { setQuestion(s); onRead(s); }}>{s}</button>)}
         </div>
       )}
       {interp && (
@@ -437,177 +536,7 @@ function Controls({ spec, levers: l, setLevers, names, elasticityNote, external 
   );
 }
 
-// --------------------------------------------------------------- results
-
-type Metric = "net_profit" | "revenue" | "cash" | "units";
-const METRIC: Record<Metric, string> = { net_profit: "Net profit", revenue: "Revenue", cash: "Cash balance", units: "Units sold" };
-
-export function Results({ res, expl, explaining, spec, onTry, onAsk, compactView = false }: {
-  res: SimResponse | { result: SimResult; risks: { scenario: RiskReport; baseline: RiskReport } }; expl: Explanation | null; explaining?: boolean; spec: ProfileSpec;
-  onTry?: (l: Levers) => void; onAsk?: (q: string) => void; compactView?: boolean;
-}) {
-  const r = res.result;
-  const cur = r.currency;
-  const [metric, setMetric] = useState<Metric>("net_profit");
-  const d = r.delta;
-  const sm = r.scenario.metrics, bm = r.baseline.metrics;
-  const H = r.scenario.horizon_months;
-  const fmt = (v: number) => (metric === "units" ? num(v) : compact(v, cur));
-  const series = (p: typeof r.scenario) => p.months.map((m) => (metric === "cash" ? m.cash : metric === "units" ? m.units : metric === "revenue" ? m.revenue : m.net_profit));
-  const band = metric === "net_profit" ? { low: r.bands.worst.monthly_net_profit, high: r.bands.best.monthly_net_profit, label: "Worst to best case" }
-    : metric === "cash" ? { low: r.bands.worst.cash, high: r.bands.best.cash, label: "Worst to best case" } : undefined;
-  const history = metric === "revenue" ? spec.history.map((h) => ({ month: h.month, value: h.revenue }))
-    : metric === "net_profit" ? spec.history.map((h) => ({ month: h.month, value: h.net_profit })) : metric === "units" ? spec.history.map((h) => ({ month: h.month, value: h.units })) : [];
-  const risks = res.risks.scenario;
-  return (
-    <div className="grid gap-6">
-      <div className="panel glass grid gap-5 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 text-[0.82rem] text-text-3">
-            <KindTag kind="calculated" />
-            <span>{monthLabel(r.scenario.start_month, true)} to {monthLabel(r.scenario.end_month, true)} · {r.engine}</span>
-          </div>
-          {!r.is_baseline && <span className="text-[0.85rem]">{expl?.assessment.text}</span>}
-        </div>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-5 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
-          <Kpi label={`Net profit, ${H} months`} value={money(d.net_profit.scenario, cur)} sub={<>{r.is_baseline ? "current course" : <Delta v={d.net_profit.change} fmt={(v) => signedMoney(v, cur)} />}{!r.is_baseline && <span className="text-text-3"> vs {money(d.net_profit.baseline, cur)}</span>}</>} big />
-          <Kpi label="Revenue" value={compact(d.revenue.scenario, cur)} sub={r.is_baseline ? undefined : <Delta v={d.revenue.change_pct ?? null} fmt={(v) => signedPct(v)} />} />
-          <Kpi label="Net margin" value={pct(sm.net_margin)} sub={r.is_baseline ? undefined : <Delta v={sm.net_margin != null && bm.net_margin != null ? sm.net_margin - bm.net_margin : null} fmt={signedPts} />} />
-          <Kpi label="Lowest cash" value={compact(sm.min_cash, cur)} sub={<span className="text-text-3">in {monthLabel(sm.min_cash_month, true)}</span>} />
-        </div>
-        <div className="grid gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="seg" role="tablist" aria-label="Chart metric">
-              {(Object.keys(METRIC) as Metric[]).map((m) => <button key={m} role="tab" aria-selected={metric === m} onClick={() => setMetric(m)}>{METRIC[m]}</button>)}
-            </div>
-            <span className="text-[0.78rem] text-text-3">Band: demand ±{r.bands.ranges.demand_pct}%, costs ±{r.bands.ranges.cost_pct}%{r.bands.ranges.elasticity_abs ? `, elasticity ±${r.bands.ranges.elasticity_abs}` : ""} ({r.bands.cases} cases)</span>
-          </div>
-          <ProjectionChart months={r.scenario.months.map((m) => m.month)} history={history} ariaLabel={`${METRIC[metric]} by month, current course and scenario`} format={fmt} zero={metric !== "units"}
-            series={[
-              { key: "base", label: "Current course", values: series(r.baseline), color: "var(--series-baseline)", dash: "6 5", shape: "ring" },
-              ...(r.is_baseline ? [] : [{ key: "scen", label: "This scenario", values: series(r.scenario), color: "var(--series-1)", shape: "circle" as const }]),
-            ]} band={r.is_baseline ? undefined : band} />
-        </div>
-      </div>
-
-      <div className="grid items-start gap-6 lg:grid-cols-2">
-        {!r.is_baseline && (
-          <Section title="Why net profit changes" aside={<KindTag kind="calculated" />}>
-            <div className="panel p-4"><BridgeChart start={d.net_profit.baseline ?? 0} end={d.net_profit.scenario ?? 0} items={r.bridge} cur={cur} /></div>
-            {r.scenario.demand_factors.length > 0 && (
-              <ul className="grid gap-1 text-[0.84rem] text-text-2">
-                {r.scenario.demand_factors.map((f) => <li key={f.key + f.label} className="flex justify-between gap-3"><span>{f.label} <span className="text-text-3">({f.note})</span></span><span className="num text-text">×{f.multiplier.toFixed(3)}</span></li>)}
-              </ul>
-            )}
-          </Section>
-        )}
-        <Explain expl={expl} explaining={!!explaining} onTry={onTry} onAsk={onAsk} />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Section title="Break-even">
-          <div className="panel grid gap-2 p-4 text-[0.88rem]">
-            <Row k={`Break-even ${spec.unit_label}/month`} v={sm.break_even_units == null ? "none (each unit loses money)" : num(sm.break_even_units)} />
-            <Row k="Average sold/month" v={num(r.scenario.monthly_avg.units)} />
-            <Row k="Safety margin" v={pct(sm.safety_margin)} />
-            <Row k="Contribution per unit" v={money(sm.contribution_per_unit, cur, 2)} />
-            {expl?.required_volume?.possible && <p className="pt-1 text-[0.8rem] text-text-2">To keep gross profit unchanged, volume would need to change {signedPct(expl.required_volume.needed_change!)}; the demand model gives {signedPct(expl.required_volume.expected_change)}.</p>}
-          </div>
-        </Section>
-        <Section title="Capacity & stock">
-          <div className="panel grid gap-2 p-4 text-[0.88rem]">
-            <Row k="Capacity use" v={sm.capacity_utilization == null ? "not limited" : pct(sm.capacity_utilization)} />
-            <Row k="Demand not served" v={pct(sm.lost_share)} />
-            <Row k="Stock cover at end" v={sm.inventory_cover_months == null ? "not tracked" : `${num(sm.inventory_cover_months, 1)} months`} />
-            {sm.subscribers_end != null && <Row k="Subscribers at end" v={num(sm.subscribers_end)} />}
-            <Row k="Headcount" v={num(sm.headcount, 1)} />
-          </div>
-        </Section>
-        <Section title="Cash">
-          <div className="panel grid gap-2 p-4 text-[0.88rem]">
-            <Row k="Starting cash" v={money(sm.starting_cash, cur)} />
-            <Row k="Ending cash" v={money(sm.ending_cash, cur)} />
-            <Row k="One-time spending" v={money(r.scenario.totals.one_time, cur)} />
-            <Row k="Payback" v={r.payback_months == null ? "—" : `${num(r.payback_months, 1)} months`} />
-            <Row k="Runway" v={sm.runway_months == null ? "cash not falling" : `${num(sm.runway_months, 1)} months`} />
-          </div>
-        </Section>
-      </div>
-
-      <Section title="Risks in this scenario" aside={<Link to="/app/risk" className="text-[0.85rem] underline">Open Risk Radar</Link>}>
-        {risks.findings.length === 0 ? <p className="text-text-2">No rule was triggered for this scenario.</p> : (
-          <ul className="grid gap-2">
-            {risks.findings.slice(0, compactView ? 3 : 5).map((f) => (
-              <li key={f.id} className="panel flex flex-wrap items-start gap-3 p-3">
-                <SeverityBadge s={f.severity} />
-                <div className="grid min-w-0 flex-1 basis-[15rem] gap-0.5"><span className="font-semibold">{f.title}</span><span className="text-[0.85rem] text-text-2">{f.summary}</span></div>
-                {onTry && f.actions[0]?.levers && Object.keys(f.actions[0].levers).length > 0 && <button className="btn btn-sm btn-outline" onClick={() => onTry({ ...r.levers, ...f.actions[0].levers, start_month: null })}>{f.actions[0].label}</button>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Section>
-
-      {!!r.levers.data_links?.length && (
-        <Section title="External data used in this scenario" aside={<span className="text-[0.78rem] text-text-3">Applied by you; shown with source, dates and the rule used</span>}>
-          <DataLinks links={r.levers.data_links} />
-        </Section>
-      )}
-
-      <Section title="Assumptions behind these numbers" aside={<ConfidenceMeter level={r.confidence.level} score={r.confidence.score} reasons={r.confidence.reasons} />}>
-        <div className="table-wrap">
-          <table className="data min-w-[560px]">
-            <thead><tr><th>Assumption</th><th className="n">Value</th><th>Source</th><th>Note</th></tr></thead>
-            <tbody>
-              {r.assumptions.map((a, i) => (
-                <tr key={a.key + i}><td>{a.label}</td><td className="n">{a.value == null ? "" : `${a.value}${a.unit === "%" ? "%" : a.unit ? ` ${a.unit}` : ""}`}</td><td><SourceBadge s={a.source} /></td><td className="text-text-2">{a.note}</td></tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <details className="text-[0.84rem] text-text-2"><summary className="cursor-pointer text-text-3">How the engine simplifies</summary><ul className="mt-2 list-disc pl-5">{r.simplifications.map((s) => <li key={s}>{s}</li>)}</ul></details>
-        {r.history_check && <p className="text-[0.82rem] text-text-3">Check against reality: your last entered month ({monthLabel(r.history_check.last_actual_month, true)}) had revenue of {money(r.history_check.last_actual_revenue, cur)}; the projection's first month is {money(r.history_check.baseline_first_month_revenue, cur)} ({signedPct(r.history_check.gap_pct)}), adjusted for season.</p>}
-      </Section>
-    </div>
-  );
-}
-
-function Row({ k, v }: { k: string; v: ReactNode }) {
-  return <div className="flex items-baseline justify-between gap-3"><span className="text-text-2">{k}</span><span className="num text-right">{v}</span></div>;
-}
-
-function Explain({ expl, explaining, onTry, onAsk }: { expl: Explanation | null; explaining: boolean; onTry?: (l: Levers) => void; onAsk?: (q: string) => void }) {
-  return (
-    <Section title="What this means" aside={explaining ? <span className="chip chip-ai"><Spark />AI is writing…</span> : expl && <KindTag kind={expl.mode === "ai" ? "ai" : "rules"} title={expl.mode === "ai" ? `Written by ${expl.model}; figures checked against the calculation` : undefined} />}>
-      <div className="panel grid gap-3 p-4" style={expl?.mode === "ai" ? { borderColor: "rgb(194 181 255 / 35%)" } : undefined}>
-        {!expl ? <span className="think-text">Waiting for the calculation…</span> : (
-          <>
-            <p className={`text-[0.95rem] leading-relaxed ${explaining ? "stale" : ""}`}>{expl.summary}</p>
-            {expl.key_points.length > 0 && <ul className="grid list-disc gap-1 pl-5 text-[0.88rem] text-text-2">{expl.key_points.map((k, i) => <li key={i}>{k}</li>)}</ul>}
-            {expl.risk_notes.length > 0 && <div className="grid gap-1 text-[0.85rem]">{expl.risk_notes.map((n) => <p key={n.finding_id} className="text-text-2">{n.explanation}</p>)}</div>}
-            {expl.recommendations.length > 0 && (
-              <div className="grid gap-1.5">
-                <span className="text-[0.82rem] font-semibold">Worth testing next</span>
-                {expl.recommendations.map((rc, i) => (
-                  <div key={i} className="flex flex-wrap items-center justify-between gap-2 text-[0.86rem]">
-                    <span className="text-text-2">{rc.text}</span>
-                    {rc.levers && onTry ? <button className="btn btn-sm btn-outline" onClick={() => onTry(rc.levers!)}>Load it</button>
-                      : rc.try_question && onAsk ? <button className="btn btn-sm btn-outline" onClick={() => onAsk(rc.try_question!)}>Ask it</button> : null}
-                  </div>
-                ))}
-              </div>
-            )}
-            {expl.next_scenarios.length > 0 && onAsk && <div className="flex flex-wrap gap-1.5">{expl.next_scenarios.map((q) => <button key={q} className="chip interactive cursor-pointer" onClick={() => onAsk(q)}>{q}</button>)}</div>}
-            {expl.caveats.length > 0 && <p className="text-[0.8rem] text-text-3">Depends on: {expl.caveats.join(" ")}</p>}
-            {expl.notice && <p className="text-[0.78rem] text-text-3">{expl.notice}</p>}
-          </>
-        )}
-      </div>
-    </Section>
-  );
-}
-
-function SaveForm({ initial, onSave, onCancel, reduced }: { initial: string; onSave: (name: string) => Promise<void>; onCancel: () => void; reduced: boolean }) {
+function SaveForm({ initial, onSave, onCancel, reduced, label = "Save" }: { initial: string; onSave: (name: string) => Promise<void>; onCancel: () => void; reduced: boolean; label?: string }) {
   const [name, setName] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -615,7 +544,7 @@ function SaveForm({ initial, onSave, onCancel, reduced }: { initial: string; onS
     <motion.form initial={reduced ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="panel flex flex-wrap items-end gap-2 p-4"
       onSubmit={async (e) => { e.preventDefault(); setBusy(true); try { await onSave(name.trim() || "Scenario"); } catch (x) { setErr(x instanceof Error ? x.message : String(x)); } finally { setBusy(false); } }}>
       <label className="field min-w-[240px] flex-1"><span>Scenario name</span><input className="input" autoFocus value={name} maxLength={160} onChange={(e) => setName(e.target.value)} /></label>
-      <button className="btn btn-primary" disabled={busy}>{busy && <Spinner />}Save scenario</button>
+      <button className="btn btn-primary" disabled={busy}>{busy && <Spinner />}{label}</button>
       <button type="button" className="btn btn-quiet" onClick={onCancel}>Cancel</button>
       {err && <p className="error-text w-full">{err}</p>}
     </motion.form>

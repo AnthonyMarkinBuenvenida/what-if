@@ -66,7 +66,7 @@ export default function Dashboard() {
       </section>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-        <Section title="Active risk alerts" aside={<Link to="/app/risk" className="text-[0.85rem] underline">Risk Radar · score {data.risk.score}</Link>}>
+        <Section title="Current business risk" aside={<Link to="/app/risk" className="text-[0.85rem] underline">Risk Radar · score {data.risk.score}</Link>}>
           {data.risk.findings.length === 0 ? <p className="panel p-4 text-text-2">No rule is triggered on the current course.</p> : (
             <ul className="grid gap-2">
               {data.risk.findings.map((f) => (

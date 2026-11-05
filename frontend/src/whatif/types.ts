@@ -118,7 +118,11 @@ export interface Explanation {
   summary: string; key_points: string[]; risk_notes: { finding_id: string; explanation: string }[];
   recommendations: { text: string; try_question: string | null; levers?: Levers }[];
   next_scenarios: string[]; caveats: string[]; dropped: number; notice: string | null;
+  /** One short note per results chart (AI-written when chart_notes_ai lists the chart, otherwise from the calculation). */
+  chart_notes?: Partial<Record<ChartKey, string>>; chart_notes_ai?: ChartKey[];
+  not_recommended?: string[]; next_step?: string | null; generated_at?: string; cached?: boolean; ai_ms?: number;
 }
+export type ChartKey = "comparison" | "trend" | "expenses" | "break_even" | "impact" | "range" | "risks";
 
 export interface Interpretation {
   mode: "ai" | "rules"; model?: string; levers: Levers; name: string; notice: string | null; elapsed_ms?: number;
@@ -129,10 +133,13 @@ export interface Interpretation {
 export interface ScenarioSummary {
   id: number; business_id: number; profile_id: number; name: string; question: string; levers: Levers; origin: string; pinned: boolean;
   created_at: string; updated_at: string | null;
-  summary: { horizon_months: number | null; net_profit: number | null; net_profit_baseline: number | null; revenue: number | null; net_margin: number | null; risk_score: number | null; risk_level: Severity | null; confidence: string | null; is_baseline: boolean | null; assessment: string | null };
+  summary: { horizon_months: number | null; net_profit: number | null; net_profit_baseline: number | null; revenue: number | null; net_margin: number | null; risk_score: number | null; risk_level: Severity | null; confidence: string | null; is_baseline: boolean | null; assessment: string | null; change?: number | null; currency?: string | null };
+  opened_at?: string | null; calc_ms?: number | null; source_scenario_id?: number | null; engine?: string; computed_at?: string;
+  explanation_mode?: "ai" | "calculation" | null; explanation_model?: string | null; business_name?: string; duplicate_request?: boolean;
 }
 export interface ScenarioFull extends ScenarioSummary {
   result: SimResult; risks: { scenario: RiskReport; baseline: RiskReport }; explanation: Explanation | null; interpretation: Interpretation | null;
+  profile?: { id: number; version: number; created_at: string; spec: ProfileSpec };
 }
 
 export interface Signal { key?: string; label: string; source: string; kind: string; status: "ok" | "failed" | "unavailable" | "stale"; terms?: string; age_hours?: number | null; refresh_error?: { message: string } | null; summary?: string; retrieved_at: string | null; reason?: string; error?: { message: string }; source_url?: string | null; data?: unknown }

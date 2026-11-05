@@ -31,7 +31,8 @@ Open http://localhost:5173. For single-process mode, run `npm run build` in `fro
 |---|---|
 | `/` | Landing page with a live preview: the real engine runs on a fictional milk tea shop |
 | `/app` | Dashboard: current course for 12 months, actual history, active risks, recent scenarios and insights, data connections |
-| `/app/simulate` | Simulation workspace: ask in plain language or use the controls, run, see why the numbers change, save |
+| `/app/simulate` | Simulation workspace: ask in plain language or use the controls, run; every run is saved automatically and the last one reopens after a restart. Results are charts and tables with a short note per chart |
+| `/app/history` | Every saved simulation: search, filter by business or kind, sort by date, name, business or profit; open, rename, duplicate, compare, delete |
 | `/app/risk` | Risk Radar: score, warnings filterable by severity, category, metric, date and scope; evidence, rule, impact, "Simulate this" actions; assessment and recommendations for the current course, a saved scenario or one warning |
 | `/app/compare` | Scenario comparison: same profile, period and start month; ranked by an objective you choose |
 | `/app/setup` | Business setup by industry; every template value is marked as an estimate until you change it |
@@ -40,6 +41,32 @@ Open http://localhost:5173. For single-process mode, run `npm run build` in `fro
 | Retail lab | The original Monte Carlo digital-twin tools (`/app/overview`, `/app/twin`, `/app/worlds`, `/app/simulations`, `/app/lab`, …) and the `/demo` walkthrough |
 
 **Demo:** "Open the demo milk tea shop" creates *Sunny Cup Milk Tea (demo)*, a fictional shop in Quezon City with six months of made-up history and six saved scenarios. It is labelled as demo data everywhere.
+
+## Saved simulations and storage
+
+Every completed simulation is saved automatically: after the result appears, the browser stores it, and the status reads **Saving…**, then **Saved** only once the database has confirmed it, or **Save failed — Retry**. Each run carries a one-time key, so a repeated click or a network retry returns the same record instead of a duplicate. "Name this scenario" renames the run; "Save a copy" duplicates it.
+
+- **What a saved simulation contains:** the exact business profile version it was calculated from (products, prices, costs, volumes, inventory, goals, history, assumptions), the scenario changes and the original question, the full result (revenue, expenses, gross and net profit, margins, break-even, best and worst cases, profit bridge, confidence and its reasons, every assumption, the engine version, calculation time and duration), the Risk Radar findings with their evidence and thresholds, and the explanation. External data applied to it is kept with its source, value, units, observation or forecast date, retrieval time and the rule used.
+- **AI text is stored apart from the figures**, with its model, time and the data it was given. An AI explanation is kept when a later attempt falls back to rules (for example when the daily AI quota is used up).
+- **Opening a saved simulation shows it exactly as stored** — nothing is recalculated. "Recalculate" creates a new record linked to the original; the original is never overwritten.
+- **Restoring:** the simulator reopens the simulation you looked at last. If a run was interrupted before it was saved, the page says so instead of presenting it as saved.
+
+| Where | Database | Durable |
+|---|---|---|
+| Local | SQLite file `backend/data/startup.db` (or `STARTUP_DATA_DIR`) | Yes |
+| Vercel | Neon Postgres through `DATABASE_URL` (set by the Neon integration) | Yes |
+| Vercel without `DATABASE_URL` | SQLite in `/tmp` | **No** — lost when an instance stops; `/api/health` and the History page say so |
+
+- **Migrations:** on startup, missing tables are created and missing columns added (`ADD COLUMN` only). Nothing is dropped, reset or rewritten.
+- **Health:** `GET /api/health` runs a real database query and reports the database kind and whether it is durable (HTTP 503 if the database cannot be reached). A database outage during a save returns a clear 503 and nothing is half-saved.
+- **Backups:** `cd backend && .venv/Scripts/python -m scripts.backup_db` copies the SQLite database safely while the server runs (to `backend/data/backups/`). For Postgres, use `pg_dump` (the script prints the command) or Neon's point-in-time restore. To restore SQLite, stop the backend and copy the backup over `backend/data/startup.db`.
+- **OneDrive:** the project folder is synced by OneDrive. Syncing a live SQLite file can briefly lock it; if that happens, set `STARTUP_DATA_DIR` to a folder outside OneDrive.
+
+## Results: charts first
+
+The results are mostly charts and tables, all from the engine: six key figures (revenue, total expenses, gross profit, net profit, net margin, break-even volume, each against the current course), current course vs scenario bars, month-by-month lines (only the engine's calculated months, plus history you entered — nothing is interpolated), expenses by category with an exact table, break-even (units sold vs the break-even volume), the profit bridge (what changed net profit), best and worst case ranges, risks, a detailed financial table and the assumptions. The current course is always drawn outlined (or as a ring) and the scenario solid, with a legend and direct labels, so the charts do not rely on colour alone.
+
+Under each chart a one- or two-sentence note says what it shows. One AI request writes all the notes plus the overall analysis (recommended, not recommended, next step); notes with numbers not in the calculation, promised outcomes or predictions of failure are removed and the rule-based note is kept. Without AI, every note is written from the calculation and labelled.
 
 ## Kinds of numbers
 
@@ -85,6 +112,12 @@ Cash flow        = net profit + (variable costs − inventory purchases) − one
 There are 19 written rules: net margin, break-even, unit economics (price at or below cost), cash shortfall and runway, profit versus the current course, operating costs outpacing revenue, revenue decline (seasonally adjusted for entered history), cost pressure on gross margin, capacity, stockouts and excess stock, marketing spend and return, product and supplier concentration, expansion versus cash, profit goal, worst-case loss, churn, severe weather (forecast), inflation (World Bank), and data quality.
 
 Each warning carries its metric, threshold, evidence, what triggered it, estimated impact, what happens without action, and actions that load into the simulator. Severity is shown with a shape and a word, never colour alone: low ● · moderate ▲ · high ◆ · critical ⯃. Score = 100 × (1 − Π(1 − weight)), with weights critical 0.45, high 0.25 and moderate 0.10. Risks are recalculated whenever the profile or a scenario changes, and when Risk Radar opens. Nothing runs in the background.
+
+### Current business vs scenarios
+
+Risk Radar keeps two perspectives apart. **Current business** is the profile as it is today with no changes applied; it changes only when your business figures, entered history or retrieved data change, never because a scenario was run (the dashboard shows the same assessment). **A scenario** is hypothetical: the same 19 rules applied to the scenario's projection. The page shows both dials side by side, defaulting to the scenario you last ran (the simulator links straight to it), with a rule-by-rule table of what appears, clears, worsens or improves. Warnings based on your entered past results are checked for the current business only and are marked "not re-checked" for scenarios rather than "cleared".
+
+Risk Radar recalculates scenarios on today's figures. Each saved scenario also keeps the assessment it was saved with; when your figures have changed since, the page shows both ("As saved on profile vN"). Opening a saved simulation and the History page always show the saved assessment.
 
 ### Assessment and recommendations (`backend/app/whatif/advisor.py`)
 
@@ -158,6 +191,7 @@ GDP growth is shown as context only. Set the foreign currency and imported cost 
 ```bash
 cd backend && .venv/Scripts/python -m pytest tests -q   # engine, Risk Radar, AI layer (mocked), API workflow, external data, retail lab
 cd backend && STARTUP_LIVE_TESTS=1 .venv/Scripts/python -m pytest tests -q -k live   # also call the real external APIs
+cd backend && TEST_DATABASE_URL=postgresql://... .venv/Scripts/python -m pytest tests -q   # the same suite on Postgres
 cd frontend && npx vitest run                           # retail-lab browser fallback engine parity
 cd frontend && npx tsc -b                               # type check
 cd frontend && npm run build                            # production build

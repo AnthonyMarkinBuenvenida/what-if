@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator
 
@@ -253,6 +253,13 @@ class WhatIfScenario(Base):
     pinned: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
+    # One key per completed run, sent by the browser: a repeated click or network retry returns the same record.
+    client_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    calc_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source_scenario_id: Mapped[int | None] = mapped_column(Integer, nullable=True)  # set on duplicates and recalculations
+    opened_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)  # last opened, to restore where the user was
+
+    __table_args__ = (Index("ux_wi_scenarios_business_client_key", "business_id", "client_key", unique=True),)
 
 
 class WhatIfReport(Base):

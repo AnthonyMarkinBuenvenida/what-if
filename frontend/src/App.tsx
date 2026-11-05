@@ -26,6 +26,7 @@ const WIDashboard = lazy(() => import("./whatif/pages/Dashboard"));
 const WISimulate = lazy(() => import("./whatif/pages/Simulate"));
 const WIRisk = lazy(() => import("./whatif/pages/RiskRadar"));
 const WICompare = lazy(() => import("./whatif/pages/Compare"));
+const WIHistory = lazy(() => import("./whatif/pages/History"));
 const WISetup = lazy(() => import("./whatif/pages/Setup"));
 const WIReports = lazy(() => import("./whatif/pages/Reports"));
 const WIReportView = lazy(() => import("./whatif/pages/Reports").then((m) => ({ default: m.ReportView })));
@@ -64,6 +65,7 @@ export default function App() {
               <Route path="simulate" element={<WISimulate />} />
               <Route path="risk" element={<WIRisk />} />
               <Route path="compare" element={<WICompare />} />
+              <Route path="history" element={<WIHistory />} />
               <Route path="setup" element={<WISetup />} />
               <Route path="reports" element={<WIReports />} />
               <Route path="reports/w/:id" element={<WIReportView />} />

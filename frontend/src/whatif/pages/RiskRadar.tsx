@@ -1,11 +1,11 @@
 import { useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { api } from "../../lib/api";
 import { useAsync, useReduced } from "../../lib/hooks";
 import { useWorkspace } from "../../app/workspace";
 import { ErrorBox, Skeleton, Spinner } from "../../components/ui";
-import { RiskDial } from "../charts";
+import { RiskCompare, type Financials, type RadarScenario } from "../RiskCompare";
 import { ago, withUnit } from "../format";
 import type { Finding, RiskReport, Severity, Signal } from "../types";
 import { KindTag, NeedsProfile, PageTitle, Section, SeverityBadge, SevShape, sevLabel, useProfile } from "../ui";
@@ -13,9 +13,9 @@ import { RiskAssessmentPanel, type AssessTarget } from "../RiskAssessment";
 import { scrollToY } from "../../lib/scrollfx";
 
 interface Radar {
-  computed_at: string; profile_version: number; horizon_months: number; currency: string; baseline: RiskReport;
-  scenarios: { id: number; name: string; levers: Record<string, unknown>; created_at: string; score: number; level: Severity; counts: Record<Severity, number>; findings: Finding[]; net_profit: number }[];
-  signals: Record<string, Signal>; rules: { id: string; category_label: string; metric: string; thresholds: string; why: string }[]; categories: Record<string, string>;
+  computed_at: string; profile_version: number; horizon_months: number; currency: string; unit_label?: string; baseline: RiskReport; baseline_financials?: Financials;
+  scenarios: RadarScenario[];
+  signals: Record<string, Signal>; rules: { id: string; category_label: string; metric: string; thresholds: string; why: string }[]; categories: Record<string, string>; older_automatic_runs?: number;
 }
 
 const SEVS: Severity[] = ["critical", "high", "moderate", "low"];
@@ -27,6 +27,15 @@ export default function RiskRadar() {
   const reduced = useReduced();
   const { data, error, loading, reload } = useAsync<Radar | null>(
     () => (current && prof.profile ? api.get<Radar>(`/api/whatif/businesses/${current.id}/risk`) : Promise.resolve(null)), [current?.id, prof.profile?.id]);
+  const [params] = useSearchParams();
+  const linked = params.get("scenario");  // from the simulator: compare and assess that scenario
+  // The compared scenario: the one linked from the simulator, otherwise the last one chosen for this business.
+  const pickKey = `whatif-risk-compare-${current?.id ?? 0}`;
+  const [compareId, setCompareIdState] = useState<number | null>(() => {
+    if (linked) return +linked;
+    try { const v = localStorage.getItem(pickKey); return v ? +v : null; } catch { return null; }
+  });
+  const setCompareId = (id: number) => { setCompareIdState(id); try { localStorage.setItem(pickKey, String(id)); } catch { /* storage unavailable */ } };
   const [scope, setScope] = useState<string>("all");
   const [sevs, setSevs] = useState<Severity[]>([]);
   const [cat, setCat] = useState("");
@@ -34,12 +43,13 @@ export default function RiskRadar() {
   const [since, setSince] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [target, setTarget] = useState<AssessTarget>({ scope: "baseline", findingId: null });
+  const [target, setTarget] = useState<AssessTarget>({ scope: linked ?? "baseline", findingId: null });
   const assessRef = useRef<HTMLDivElement>(null);
 
   const all = useMemo(() => data ? [...data.baseline.findings, ...data.scenarios.flatMap((s) => s.findings)] : [], [data]);
+  const inScope = (f: Finding) => scope === "all" || (scope === "baseline" ? f.scenario_id == null : String(f.scenario_id) === scope);
   const shown = all.filter((f) =>
-    (scope === "all" || (scope === "baseline" ? f.scenario_id == null : String(f.scenario_id) === scope))
+    inScope(f)
     && (!sevs.length || sevs.includes(f.severity)) && (!cat || f.category === cat) && (!metric || f.metric.label === metric)
     && (!since || (f.created_at && Date.now() - new Date(f.created_at).getTime() <= since * 86400000)));
   const metrics = [...new Set(all.map((f) => f.metric.label))].sort();
@@ -60,7 +70,7 @@ export default function RiskRadar() {
     const el = assessRef.current;
     if (el) scrollToY(window.scrollY + el.getBoundingClientRect().top - 90);
   };
-  const scopes = [{ value: "baseline", label: "Current course", levers: {} },
+  const scopes = [{ value: "baseline", label: "Current business", levers: {} },
     ...data.scenarios.map((s) => ({ value: String(s.id), label: `Scenario: ${s.name}`, levers: s.levers }))];
   const refresh = async () => {
     setRefreshing(true);
@@ -73,33 +83,45 @@ export default function RiskRadar() {
         sub={<>Every warning comes from a written rule with a threshold, checked against calculated results, your entered history and retrieved external data. Recalculated {ago(data.computed_at)} on profile v{data.profile_version}, {data.horizon_months}-month period.</>}
         actions={<button className="btn btn-outline" onClick={reload}>Recalculate</button>} />
 
-      <div className="grid items-center gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <div className="panel glass grid justify-items-center gap-2 p-5">
-          <span className="label-soft">Current course</span>
-          <RiskDial score={data.baseline.score} level={data.baseline.level} />
+      <Section title="Current business vs scenario">
+        <RiskCompare baseline={data.baseline} baselineFinancials={data.baseline_financials} profileVersion={data.profile_version} scenarios={data.scenarios} cur={cur} unit={data.unit_label ?? "units"}
+          selected={data.scenarios.find((x) => x.id === compareId) ?? data.scenarios[0] ?? null} onSelect={setCompareId} />
+      </Section>
+
+      <div className="grid gap-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <span className="text-[0.82rem] text-text-3" data-testid="tiles-scope">Warnings in: {scope === "all" ? `the current business and ${data.scenarios.length} scenario${data.scenarios.length === 1 ? "" : "s"}` : scope === "baseline" ? "the current business" : `scenario “${data.scenarios.find((x) => String(x.id) === scope)?.name ?? ""}”`} (change with Scope below)</span>
         </div>
-        <div className="grid gap-3">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {SEVS.map((s) => (
-              <button key={s} className={`panel interactive grid gap-1 p-3 text-left ${sevs.includes(s) ? "!border-[var(--signal)]" : ""}`} aria-pressed={sevs.includes(s)}
-                onClick={() => setSevs(sevs.includes(s) ? sevs.filter((x) => x !== s) : [...sevs, s])}>
-                <span className={`inline-flex items-center gap-1.5 text-[0.82rem] font-semibold sev-${s} !bg-transparent`} style={{ border: 0 }}><SevShape s={s} />{sevLabel(s)}</span>
-                <span className="kpi text-[1.8rem]">{all.filter((f) => f.severity === s).length}</span>
-              </button>
-            ))}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {SEVS.map((sv) => (
+            <button key={sv} className={`panel interactive grid gap-1 p-3 text-left ${sevs.includes(sv) ? "!border-[var(--signal)]" : ""}`} aria-pressed={sevs.includes(sv)}
+              onClick={() => setSevs(sevs.includes(sv) ? sevs.filter((x) => x !== sv) : [...sevs, sv])}>
+              <span className={`inline-flex items-center gap-1.5 text-[0.82rem] font-semibold sev-${sv} !bg-transparent`} style={{ border: 0 }}><SevShape s={sv} />{sevLabel(sv)}</span>
+              <span className="kpi text-[1.8rem]">{all.filter((f) => inScope(f) && f.severity === sv).length}</span>
+            </button>
+          ))}
+        </div>
+        {!!data.older_automatic_runs && <p className="text-[0.78rem] text-text-3">Showing named scenarios and the 5 latest automatic runs; {data.older_automatic_runs} older automatic run{data.older_automatic_runs > 1 ? "s are" : " is"} in <Link to="/app/history" className="underline">History</Link>.</p>}
+        {data.scenarios.length > 0 && (
+          <div className="table-wrap" data-testid="radar-table">
+            <table className="data min-w-[640px]">
+              <thead><tr><th>Scenario</th><th className="n">Risk score</th><th>Level today</th><th className="n">Warnings</th><th>As saved</th></tr></thead>
+              <tbody>
+                <tr><td>Current business</td><td className="n">{data.baseline.score}</td><td><SeverityBadge s={data.baseline.level} /></td><td className="n">{data.baseline.findings.length}</td><td className="text-text-3">—</td></tr>
+                {data.scenarios.map((sc) => (
+                  <tr key={sc.id}>
+                    <td><Link to={`/app/simulate?scenario=${sc.id}`} className="underline">{sc.name}</Link></td>
+                    <td className="n">{sc.score}</td><td><SeverityBadge s={sc.level} /></td><td className="n">{sc.findings.length}</td>
+                    <td>{sc.inputs_changed && sc.saved?.level
+                      ? <span className="inline-flex items-center gap-1.5 text-[0.8rem]"><SeverityBadge s={sc.saved.level} suffix={`· ${sc.saved.score}`} /><span className="text-text-3">profile v{sc.saved.profile_version}</span></span>
+                      : <span className="text-[0.8rem] text-text-3">same as today</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          {data.scenarios.length > 0 && (
-            <div className="table-wrap">
-              <table className="data">
-                <thead><tr><th>Scenario</th><th className="n">Risk score</th><th>Level</th><th className="n">Warnings</th></tr></thead>
-                <tbody>
-                  <tr><td>Current course</td><td className="n">{data.baseline.score}</td><td><SeverityBadge s={data.baseline.level} /></td><td className="n">{data.baseline.findings.length}</td></tr>
-                  {data.scenarios.map((s) => <tr key={s.id}><td><Link to={`/app/simulate?scenario=${s.id}`} className="underline">{s.name}</Link></td><td className="n">{s.score}</td><td><SeverityBadge s={s.level} /></td><td className="n">{s.findings.length}</td></tr>)}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        )}
+        <p className="text-[0.78rem] text-text-3">“Level today” applies each scenario's changes to your current business figures. “As saved” is the assessment stored with the scenario, shown when your figures have changed since; opening a saved simulation always shows its saved assessment.</p>
       </div>
 
       <Section title="Assessment and recommendations">
@@ -111,7 +133,7 @@ export default function RiskRadar() {
         <div className="flex flex-wrap items-end gap-2" role="group" aria-label="Filters">
           <label className="field"><span>Scope</span>
             <select className="select" value={scope} onChange={(e) => setScope(e.target.value)}>
-              <option value="all">Everything</option><option value="baseline">Current course</option>
+              <option value="all">Everything</option><option value="baseline">Current business</option>
               {data.scenarios.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </label>
@@ -137,7 +159,7 @@ export default function RiskRadar() {
             {shown.map((f) => {
               const isOpen = open === f.id + (f.scenario_id ?? "");
               return (
-                <motion.li key={f.id + (f.scenario_id ?? "")} layout={!reduced} className="panel overflow-hidden">
+                <motion.li key={f.id + (f.scenario_id ?? "")} className="panel overflow-hidden">
                   <button className="interactive flex w-full flex-wrap items-start gap-3 p-4 text-left" onClick={() => setOpen(isOpen ? null : f.id + (f.scenario_id ?? ""))} aria-expanded={isOpen}>
                     <SeverityBadge s={f.severity} />
                     <span className="grid min-w-0 flex-1 gap-1">
