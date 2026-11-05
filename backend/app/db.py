@@ -106,7 +106,8 @@ def storage_info() -> dict:
         return {"kind": "sqlite", "durable": not ephemeral, "location": "temporary server storage (/tmp)" if ephemeral else "local SQLite file",
                 "note": ("Data in /tmp is lost when the server instance stops. Set DATABASE_URL to a hosted Postgres database."
                          if ephemeral else "Back up the file with `python -m scripts.backup_db`.")}
-    return {"kind": kind, "durable": True, "location": f"{kind} at {url.host}", "note": "Hosted database; data survives restarts and redeploys."}
+    # The server address is not shown: it is not needed to judge durability and need not be public.
+    return {"kind": kind, "durable": True, "location": "hosted PostgreSQL" if kind == "postgresql" else f"hosted {kind}", "note": "Hosted database; data survives restarts and redeploys."}
 
 
 def db_health() -> dict:
