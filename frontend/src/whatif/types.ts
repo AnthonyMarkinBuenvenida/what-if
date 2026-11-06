@@ -116,12 +116,16 @@ export interface Explanation {
   assessment: { key: string; text: string; net_profit_change: number };
   required_volume: { possible: boolean; needed_change?: number; expected_change: number | null; contribution_before: number; contribution_after: number } | null;
   summary: string; key_points: string[]; risk_notes: { finding_id: string; explanation: string }[];
-  recommendations: { text: string; try_question: string | null; levers?: Levers }[];
+  recommendations: { text: string; reason?: string | null; try_question: string | null; levers?: Levers }[];
   next_scenarios: string[]; caveats: string[]; dropped: number; notice: string | null;
   /** One short note per results chart (AI-written when chart_notes_ai lists the chart, otherwise from the calculation). */
   chart_notes?: Partial<Record<ChartKey, string>>; chart_notes_ai?: ChartKey[];
-  not_recommended?: string[]; next_step?: string | null; generated_at?: string; cached?: boolean; ai_ms?: number;
+  /** Plain strings in explanations saved before the table update. */
+  not_recommended?: (string | AvoidItem)[]; next_step?: string | null;
+  findings?: FindingRow[]; findings_ai?: string[]; generated_at?: string; cached?: boolean; ai_ms?: number;
 }
+export interface AvoidItem { action: string; reason: string; consequence?: string | null }
+export interface FindingRow { key: string; label: string; current: number | null; simulated: number | null; unit: string; impact: string; explanation: string }
 export type ChartKey = "comparison" | "trend" | "expenses" | "break_even" | "impact" | "range" | "risks";
 
 export interface Interpretation {
@@ -147,13 +151,14 @@ export interface Signal { key?: string; label: string; source: string; kind: str
 export interface AIStatus { provider: string; configured: boolean; model: string | null; setup_hint: string | null; timeout_seconds: number; calls: number; failures: number; last_success_at: string | null; last_error: string | null; last_error_at: string | null }
 
 /** Risk Radar assessment (backend/app/whatif/advisor.py). Severity and figures come from the Radar; AI only writes the text. */
-export interface AssessmentItem { action: string; reason: string; finding_ids: string[]; timing?: "immediate" | "next" | "ongoing" }
+export interface AssessmentItem { action: string; reason: string; finding_ids: string[]; timing?: "immediate" | "next" | "ongoing"; expected_benefit?: string | null; consequence?: string | null }
 export interface RiskAssessment {
   mode: "ai" | "rules"; model: string | null; provider: string | null; level: Severity; overall_level: Severity; score: number;
   counts: Record<Severity, number>; scope: { kind: "baseline" | "scenario"; id: number | null; name: string };
   focus: { finding_id: string; title: string; severity: Severity } | null;
   labels: { overview: string; recommended: string; next: string | null; avoid: string; impact: string; monitor: string; verify: string };
-  detected: { finding_id: string; severity: Severity; title: string; summary: string; metric: Finding["metric"]; rule_thresholds: string; data_kind: Finding["data_kind"] }[];
+  detected: { finding_id: string; severity: Severity; title: string; summary: string; metric: Finding["metric"]; rule_thresholds: string; data_kind: Finding["data_kind"];
+    impact?: Finding["impact"]; if_no_action?: string; evidence?: Finding["evidence"] }[];
   overview: string; priority: string | null; relationships: string | null;
   recommended: AssessmentItem[]; not_recommended: AssessmentItem[]; not_recommended_none: string | null;
   expected_impact: { if_followed: string; if_ignored: string };

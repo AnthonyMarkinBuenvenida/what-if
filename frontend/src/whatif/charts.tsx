@@ -102,16 +102,16 @@ export function ProjectionChart({ months, history = [], series, band, height = 2
     const r = e.currentTarget.getBoundingClientRect();
     setHover(Math.max(0, Math.min(n - 1, Math.round(((e.clientX - r.left - pad.l) / (width - pad.l - pad.r)) * (n - 1)))));
   };
-  const legend: { label: string; node: ReactNode }[] = [
-    ...(H ? [{ label: "Actual (entered)", node: <LegendMark color="var(--moon)" shape="square" /> }] : []),
-    ...series.map((s) => ({ label: s.label, node: <LegendMark color={s.color} dash={s.dash} shape={s.shape} /> })),
-    ...(band ? [{ label: band.label, node: <span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: "var(--series-1)", opacity: 0.25 }} /> }] : []),
+  const legend: { id: string; label: string; node: ReactNode }[] = [
+    ...(H ? [{ id: "actual", label: "Actual (entered)", node: <LegendMark color="var(--moon)" shape="square" /> }] : []),
+    ...series.map((s) => ({ id: "s-" + s.key, label: s.label, node: <LegendMark color={s.color} dash={s.dash} shape={s.shape} /> })),
+    ...(band ? [{ id: "band", label: band.label, node: <span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: "var(--series-1)", opacity: 0.25 }} /> }] : []),
   ];
 
   return (
     <div className="grid gap-2">
       <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[0.8rem] text-text-2" aria-label="Legend">
-        {legend.map((l) => <li key={l.label} className="inline-flex items-center gap-1.5">{l.node}{l.label}</li>)}
+        {legend.map((l) => <li key={l.id} className="inline-flex items-center gap-1.5">{l.node}{l.label}</li>)}
       </ul>
       <div ref={ref} className="relative min-w-0" style={{ contain: "inline-size", height }}>
         {width > 0 && <svg width={width} height={height} role="img" aria-label={ariaLabel} onPointerMove={onMove} onPointerLeave={() => setHover(null)} style={{ touchAction: "pan-y" }}>

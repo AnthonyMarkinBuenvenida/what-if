@@ -1,20 +1,23 @@
-// Simulation results, visual first: key figures, then charts and tables, each with a short note that reads the
-// chart (AI-written when available, otherwise from the calculation), then the overall analysis, risks, the full
-// financial table and the assumptions. Every number comes from the engine (backend/app/whatif/engine.py).
+// Simulation results, table and chart first: the financial summary table, then charts each with a one- or two-sentence
+// note (AI-written when available, otherwise from the calculation) and a table where one fits, then the analysis tables,
+// risks, calculation details and assumptions. Every number comes from the engine (backend/app/whatif/engine.py).
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { BridgeChart, ProjectionChart } from "./charts";
 import { BreakEvenChart, PairBars, RangeChart } from "./resultCharts";
 import { compact, money, monthLabel, num, pct, signedMoney, signedPct, signedPts } from "./format";
+import { asAvoid, AvoidTable, CasesTable, ChangesTable, FindingsTable, RecTable, RisksTable, SummaryTable } from "./resultTables";
+import { RTable } from "./RTable";
 import type { ChartKey, Explanation, Levers, ProfileSpec, RiskReport, SimResult } from "./types";
 import { DataLinks } from "./ExternalData";
-import { ConfidenceMeter, Delta, KindTag, Section, SeverityBadge, SourceBadge, Spark } from "./ui";
+import { ConfidenceMeter, KindTag, Section, SourceBadge, Spark } from "./ui";
 import { Spinner } from "../components/ui";
 
 type Metric = "net_profit" | "revenue" | "cash" | "units";
 const METRIC: Record<Metric, string> = { net_profit: "Net profit", revenue: "Revenue", cash: "Cash balance", units: "Units sold" };
 const EXPENSES: [string, string][] = [["variable_costs", "Variable costs (products, ingredients)"], ["staff_costs", "Staff"], ["fixed_costs", "Fixed costs (rent, utilities, other)"], ["marketing", "Marketing"], ["tax", "Tax"]];
 const totalExpenses = (t: Record<string, number>) => (t.variable_costs ?? 0) + (t.operating_expenses ?? 0) + (t.tax ?? 0);
+interface ExpRow { key: string; label: string; v: number; b: number; total: boolean }
 
 export interface ResultsProps {
   res: { result: SimResult; risks: { scenario: RiskReport; baseline: RiskReport } };
@@ -43,7 +46,7 @@ export function Results({ res, expl, explaining = false, spec, onTry, onAsk, onR
 
   return (
     <div className="@container grid gap-6" data-testid="results">
-      {/* 1. Key figures */}
+      {/* 1. Financial performance summary */}
       <div className="panel glass grid gap-4 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2 text-[0.82rem] text-text-3">
@@ -52,15 +55,8 @@ export function Results({ res, expl, explaining = false, spec, onTry, onAsk, onR
           </div>
           {!base && expl && <span className="text-[0.85rem]">{expl.assessment.text}</span>}
         </div>
-        <div className="grid grid-cols-2 gap-3 @lg:grid-cols-3 @5xl:grid-cols-6" data-testid="kpis">
-          <KpiCard label="Revenue" value={m(st.revenue)} base={m(bt.revenue)} delta={base ? null : <Delta v={bt.revenue ? (st.revenue - bt.revenue) / bt.revenue : null} fmt={(v) => signedPct(v)} />} />
-          <KpiCard label="Total expenses" value={m(totalExpenses(st))} base={m(totalExpenses(bt))} delta={base ? null : <Delta v={totalExpenses(bt) ? (totalExpenses(st) - totalExpenses(bt)) / totalExpenses(bt) : null} fmt={(v) => signedPct(v)} invert />} />
-          <KpiCard label="Gross profit" value={m(st.gross_profit)} base={m(bt.gross_profit)} delta={base ? null : <Delta v={st.gross_profit - bt.gross_profit} fmt={(v) => signedMoney(v, cur)} />} />
-          <KpiCard label={`Net profit, ${H} mo`} value={m(st.net_profit)} base={m(bt.net_profit)} strong delta={base ? null : <Delta v={st.net_profit - bt.net_profit} fmt={(v) => signedMoney(v, cur)} />} />
-          <KpiCard label="Net margin" value={pct(sm.net_margin)} base={pct(bm.net_margin)} delta={base ? null : <Delta v={sm.net_margin != null && bm.net_margin != null ? sm.net_margin - bm.net_margin : null} fmt={signedPts} />} />
-          <KpiCard label={`Break-even ${spec.unit_label}/mo`} value={sm.break_even_units == null ? "none" : num(sm.break_even_units)} base={bm.break_even_units == null ? "none" : num(bm.break_even_units)}
-            delta={base || sm.break_even_units == null || bm.break_even_units == null ? null : <Delta v={sm.break_even_units - bm.break_even_units} fmt={(v) => `${v >= 0 ? "+" : "−"}${num(Math.abs(v))}`} invert />} />
-        </div>
+        <h2 className="text-[0.98rem] font-semibold">Financial performance summary <span className="text-[0.78rem] font-normal text-text-3">{H}-month totals</span></h2>
+        <SummaryTable r={r} />
       </div>
 
       {/* 2. Baseline vs scenario */}
@@ -97,18 +93,12 @@ export function Results({ res, expl, explaining = false, spec, onTry, onAsk, onR
         <ChartPanel title="Where the money goes" sub={`Expenses by category, ${H} months`}>
           <PairBars ariaLabel="Expenses by category: current course and scenario" format={m} showScenario={!base}
             rows={EXPENSES.map(([k, label]) => ({ key: k, label, base: bt[k] ?? 0, scen: st[k] ?? 0 }))} />
-          <div className="table-wrap">
-            <table className="data text-[0.82rem]">
-              <thead><tr><th>Category</th><th className="n">{base ? "Amount" : "Scenario"}</th><th className="n">Share</th>{!base && <th className="n">Change</th>}</tr></thead>
-              <tbody>
-                {EXPENSES.map(([k, label]) => (
-                  <tr key={k}><td>{label}</td><td className="n">{money(st[k] ?? 0, cur)}</td><td className="n">{pct(totalExpenses(st) ? (st[k] ?? 0) / totalExpenses(st) : null, 0)}</td>
-                    {!base && <td className="n">{signedMoney((st[k] ?? 0) - (bt[k] ?? 0), cur)}</td>}</tr>
-                ))}
-                <tr className="font-semibold"><td>Total</td><td className="n">{money(totalExpenses(st), cur)}</td><td className="n">100%</td>{!base && <td className="n">{signedMoney(totalExpenses(st) - totalExpenses(bt), cur)}</td>}</tr>
-              </tbody>
-            </table>
-          </div>
+          <RTable<ExpRow> label="Expenses by category" cols={[
+            { key: "c", label: "Category", render: (x) => <span className={x.total ? "font-semibold" : undefined}>{x.label}</span> },
+            { key: "a", label: base ? "Amount" : "Scenario", num: true, render: (x) => money(x.v, cur) },
+            { key: "s", label: "Share", num: true, render: (x) => pct(totalExpenses(st) ? x.v / totalExpenses(st) : null, 0) },
+            ...(base ? [] : [{ key: "d", label: "Change", num: true, render: (x: ExpRow) => signedMoney(x.v - x.b, cur) }]),
+          ]} rows={[...EXPENSES.map(([k, label]) => ({ key: k, label, v: st[k] ?? 0, b: bt[k] ?? 0, total: false })), { key: "total", label: "Total", v: totalExpenses(st), b: totalExpenses(bt), total: true }]} rowKey={(x) => x.key} />
           {st.one_time > 0 && <p className="text-[0.78rem] text-text-3">One-time spending of {money(st.one_time, cur)} affects cash, not profit, and is not in this table.</p>}
           {note("expenses")}
         </ChartPanel>
@@ -132,6 +122,8 @@ export function Results({ res, expl, explaining = false, spec, onTry, onAsk, onR
         {!base && (
           <ChartPanel title="What changed net profit" sub="Each effect of your changes, from the current course to this scenario">
             <BridgeChart start={bt.net_profit} end={st.net_profit} items={r.bridge} cur={cur} />
+            <h4 className="pt-1 text-[0.86rem] font-semibold">What changed the result?</h4>
+            <ChangesTable r={r} />
             {r.scenario.demand_factors.length > 0 && (
               <details className="text-[0.82rem] text-text-2"><summary className="cursor-pointer text-text-3">Demand factors behind the volume change</summary>
                 <ul className="mt-2 grid gap-1">{r.scenario.demand_factors.map((f) => <li key={f.key + f.label} className="flex justify-between gap-3"><span>{f.label} <span className="text-text-3">({f.note})</span></span><span className="num text-text">×{f.multiplier.toFixed(3)}</span></li>)}</ul>
@@ -144,33 +136,29 @@ export function Results({ res, expl, explaining = false, spec, onTry, onAsk, onR
           <RangeChart format={m} ariaLabel="Worst, expected and best net profit"
             rows={[{ key: "b", label: "Current course", worst: r.baseline_bands.worst.net_profit, expected: bt.net_profit, best: r.baseline_bands.best.net_profit, solid: false },
               ...(base ? [] : [{ key: "s", label: "This scenario", worst: r.bands.worst.net_profit, expected: st.net_profit, best: r.bands.best.net_profit, solid: true }])]} />
-          <p className="text-[0.78rem] text-text-3">Worst case: demand −{r.bands.ranges.demand_pct}%, variable costs +{r.bands.ranges.cost_pct}%{r.bands.ranges.elasticity_abs ? `, stronger price response (${r.bands.ranges.elasticity_abs})` : ""}; best case the opposite. These are the edges of your stated ranges, not predictions.</p>
+          <CasesTable r={r} risk={risks.level} />
+          <details className="text-[0.8rem] text-text-2" data-testid="case-assumptions"><summary className="cursor-pointer text-text-3">Assumptions behind the best and worst case</summary>
+            <p className="mt-1.5">Worst case: demand −{r.bands.ranges.demand_pct}%, variable costs +{r.bands.ranges.cost_pct}%{r.bands.ranges.elasticity_abs ? `, stronger price response (${r.bands.ranges.elasticity_abs})` : ""}; best case the opposite ({r.bands.cases} combinations checked). These are the edges of your stated ranges, not predictions.</p>
+          </details>
           {note("range")}
         </ChartPanel>
       </div>
 
       {/* 8. AI analysis */}
-      <Analysis expl={expl} explaining={explaining} onTry={onTry} onAsk={onAsk} onRefreshAI={onRefreshAI} aiAvailable={aiAvailable} />
+      <Analysis r={r} expl={expl} explaining={explaining} onTry={onTry} onAsk={onAsk} onRefreshAI={onRefreshAI} aiAvailable={aiAvailable} />
 
       {/* 9. Risks */}
       <Section title="Risks in this scenario" aside={<Link to={scenarioId ? `/app/risk?scenario=${scenarioId}` : "/app/risk"} className="text-[0.85rem] underline">Compare with your current business in Risk Radar</Link>}>
-        {risks.findings.length === 0 ? <p className="text-text-2">No rule was triggered for this scenario.</p> : (
-          <ul className="grid gap-2">
-            {risks.findings.slice(0, 5).map((f) => (
-              <li key={f.id} className="panel flex flex-wrap items-start gap-3 p-3">
-                <SeverityBadge s={f.severity} />
-                <div className="grid min-w-0 flex-1 basis-[15rem] gap-0.5"><span className="font-semibold">{f.title}</span><span className="text-[0.85rem] text-text-2">{f.summary}</span></div>
-                {onTry && f.actions[0]?.levers && Object.keys(f.actions[0].levers).length > 0 && <button className="btn btn-sm btn-outline" onClick={() => onTry({ ...r.levers, ...f.actions[0].levers, start_month: null })}>{f.actions[0].label}</button>}
-              </li>
-            ))}
-          </ul>
-        )}
+        {risks.findings.length === 0 ? <p className="text-text-2">No rule was triggered for this scenario.</p>
+          : <RisksTable findings={risks.findings.slice(0, 5)} onTry={onTry} levers={r.levers} />}
         {note("risks")}
       </Section>
 
       {/* 10. Detailed financial table */}
-      <Section title="Detailed financial breakdown" aside={<KindTag kind="calculated" />}>
-        <div className="table-wrap" data-testid="financial-table">
+      <Section title="Calculation details" aside={<KindTag kind="calculated" />}>
+        <details className="panel p-4" data-testid="calc-details">
+        <summary className="cursor-pointer text-[0.88rem]">Full financial breakdown and operating figures</summary>
+        <div className="table-wrap mt-3" data-testid="financial-table">
           <table className="data min-w-[520px]">
             <thead><tr><th>{H} months</th><th className="n">Current course</th>{!base && <><th className="n">This scenario</th><th className="n">Change</th></>}</tr></thead>
             <tbody>
@@ -184,7 +172,7 @@ export function Results({ res, expl, explaining = false, spec, onTry, onAsk, onR
             </tbody>
           </table>
         </div>
-        <div className="grid gap-x-8 gap-y-1.5 text-[0.84rem] @lg:grid-cols-2">
+        <div className="mt-3 grid gap-x-8 gap-y-1.5 text-[0.84rem] @lg:grid-cols-2">
           <Row k="Capacity use" v={sm.capacity_utilization == null ? "not limited" : pct(sm.capacity_utilization)} />
           <Row k="Demand not served" v={pct(sm.lost_share)} />
           <Row k="Stock cover at end" v={sm.inventory_cover_months == null ? "not tracked" : `${num(sm.inventory_cover_months, 1)} months`} />
@@ -193,6 +181,7 @@ export function Results({ res, expl, explaining = false, spec, onTry, onAsk, onR
           <Row k="Runway" v={sm.runway_months == null ? "cash not falling" : `${num(sm.runway_months, 1)} months`} />
           {sm.subscribers_end != null && <Row k="Subscribers at end" v={num(sm.subscribers_end)} />}
         </div>
+        </details>
       </Section>
 
       {/* 11. Assumptions and data sources */}
@@ -203,7 +192,7 @@ export function Results({ res, expl, explaining = false, spec, onTry, onAsk, onR
       )}
       <Section title="Assumptions and data sources" aside={<ConfidenceMeter level={r.confidence.level} score={r.confidence.score} reasons={r.confidence.reasons} />}>
         <details className="panel p-4" data-testid="assumptions">
-          <summary className="cursor-pointer text-[0.88rem]">{r.assumptions.length} assumptions behind these numbers</summary>
+          <summary className="cursor-pointer text-[0.88rem]">Financial assumptions ({r.assumptions.length}) behind these numbers</summary>
           <div className="table-wrap mt-3">
             <table className="data min-w-[560px]">
               <thead><tr><th>Assumption</th><th className="n">Value</th><th>Source</th><th>Note</th></tr></thead>
@@ -214,16 +203,6 @@ export function Results({ res, expl, explaining = false, spec, onTry, onAsk, onR
         </details>
         {r.history_check && <p className="text-[0.82rem] text-text-3">Check against reality: your last entered month ({monthLabel(r.history_check.last_actual_month, true)}) had revenue of {money(r.history_check.last_actual_revenue, cur)}; the projection's first month is {money(r.history_check.baseline_first_month_revenue, cur)} ({signedPct(r.history_check.gap_pct)}), adjusted for season.</p>}
       </Section>
-    </div>
-  );
-}
-
-function KpiCard({ label, value, base, delta, strong = false }: { label: string; value: string; base: string; delta: ReactNode; strong?: boolean }) {
-  return (
-    <div className={`grid content-start gap-1 rounded-[var(--r-card)] border border-line p-3 ${strong ? "bg-[var(--surface-2)]" : ""}`}>
-      <span className="text-[0.76rem] text-text-3">{label}</span>
-      <span className={`kpi whitespace-nowrap ${strong ? "text-[1.5rem]" : "text-[1.25rem]"}`}>{value}</span>
-      <span className="flex flex-wrap items-center gap-x-1.5 text-[0.76rem]">{delta}<span className="text-text-3">{delta ? "vs" : "current course"} {delta ? base : ""}</span></span>
     </div>
   );
 }
@@ -254,11 +233,11 @@ function Insight({ chart, expl, explaining }: { chart: ChartKey; expl: Explanati
   );
 }
 
-function Analysis({ expl, explaining, onTry, onAsk, onRefreshAI, aiAvailable }: {
-  expl: Explanation | null; explaining: boolean; onTry?: (l: Levers) => void; onAsk?: (q: string) => void; onRefreshAI?: () => void; aiAvailable?: boolean;
+function Analysis({ r, expl, explaining, onTry, onAsk, onRefreshAI, aiAvailable }: {
+  r: SimResult; expl: Explanation | null; explaining: boolean; onTry?: (l: Levers) => void; onAsk?: (q: string) => void; onRefreshAI?: () => void; aiAvailable?: boolean;
 }) {
-  const [more, setMore] = useState(false);
   const ai = expl?.mode === "ai";
+  const h4 = "text-[0.8rem] font-semibold uppercase tracking-[0.06em] text-text-3";
   return (
     <Section title={ai ? "AI analysis" : "Analysis"} aside={
       <span className="flex flex-wrap items-center gap-2">
@@ -266,37 +245,29 @@ function Analysis({ expl, explaining, onTry, onAsk, onRefreshAI, aiAvailable }: 
         {expl?.generated_at && !explaining && <span className="text-[0.76rem] text-text-3">{ai ? expl.model : "from the calculation"} · {new Date(expl.generated_at).toLocaleString()}</span>}
         {onRefreshAI && aiAvailable && !explaining && <button className="btn btn-sm btn-outline" onClick={onRefreshAI}>{ai ? "Regenerate AI analysis" : "Ask AI to analyse"}</button>}
       </span>}>
-      <div className="panel grid gap-4 p-4" style={ai ? { borderColor: "rgb(194 181 255 / 35%)" } : undefined} data-testid="analysis">
+      <div className={`panel grid gap-4 p-4 ${explaining ? "stale" : ""}`} style={ai ? { borderColor: "rgb(194 181 255 / 35%)" } : undefined} data-testid="analysis">
         {!expl ? <span className="think-text">Waiting for the calculation…</span> : (
           <>
-            <p className={`text-[0.95rem] leading-relaxed ${explaining ? "stale" : ""}`}>{expl.summary}</p>
-            <div className="grid gap-4 @2xl:grid-cols-2">
-              <div className="grid content-start gap-2">
-                <h4 className="text-[0.8rem] font-semibold uppercase tracking-[0.06em] text-text-3"><span className="text-[var(--accent)]" aria-hidden="true">✓ </span>Recommended</h4>
-                {expl.recommendations.length === 0 ? <p className="text-[0.86rem] text-text-2">No specific change is suggested by these figures.</p> : expl.recommendations.map((rc, i) => (
-                  <div key={i} className="flex flex-wrap items-center justify-between gap-2 text-[0.86rem]">
-                    <span className="text-text-2">{rc.text}</span>
-                    {rc.levers && onTry ? <button className="btn btn-sm btn-outline" onClick={() => onTry(rc.levers!)}>Load it</button>
-                      : rc.try_question && onAsk ? <button className="btn btn-sm btn-outline" onClick={() => onAsk(rc.try_question!)}>Ask it</button> : null}
-                  </div>
-                ))}
-              </div>
-              <div className="grid content-start gap-2">
-                <h4 className="text-[0.8rem] font-semibold uppercase tracking-[0.06em] text-text-3"><span className="text-[var(--sev-high)]" aria-hidden="true">✕ </span>Not recommended</h4>
-                {(expl.not_recommended ?? []).length === 0 ? <p className="text-[0.86rem] text-text-2">No action is clearly inadvisable from these figures.</p>
-                  : <ul className="grid gap-1.5 text-[0.86rem] text-text-2">{expl.not_recommended!.map((t, i) => <li key={i}>{t}</li>)}</ul>}
-              </div>
+            <FindingsTable expl={expl} r={r} />
+            <p className="text-[0.92rem] leading-relaxed" data-testid="conclusion"><b>Conclusion:</b> <span className="text-text-2">{expl.summary}</span></p>
+            <div className="grid content-start gap-2">
+              <h4 className={h4}><span className="text-[var(--sev-low)]" aria-hidden="true">✓ </span>Recommended</h4>
+              <RecTable recs={expl.recommendations} onTry={onTry} onAsk={onAsk} />
+            </div>
+            <div className="grid content-start gap-2">
+              <h4 className={h4}><span className="text-[var(--sev-high)]" aria-hidden="true">✕ </span>Not recommended</h4>
+              <AvoidTable items={asAvoid(expl.not_recommended)} empty="No action is clearly inadvisable from these figures." />
             </div>
             {expl.next_step && <p className="text-[0.88rem]"><b>Next step:</b> <span className="text-text-2">{expl.next_step}</span></p>}
             {(expl.key_points.length > 0 || expl.caveats.length > 0 || expl.next_scenarios.length > 0) && (
-              <button className="justify-self-start text-[0.8rem] text-text-3 underline" onClick={() => setMore(!more)} aria-expanded={more}>{more ? "Hide" : "Show"} detailed analysis</button>
-            )}
-            {more && (
-              <div className="grid gap-3 border-t border-line pt-3">
-                {expl.key_points.length > 0 && <ul className="grid list-disc gap-1 pl-5 text-[0.86rem] text-text-2">{expl.key_points.map((k, i) => <li key={i}>{k}</li>)}</ul>}
-                {expl.next_scenarios.length > 0 && onAsk && <div className="flex flex-wrap gap-1.5">{expl.next_scenarios.map((q) => <button key={q} className="chip interactive cursor-pointer" onClick={() => onAsk(q)}>{q}</button>)}</div>}
-                {expl.caveats.length > 0 && <p className="text-[0.8rem] text-text-3">Depends on: {expl.caveats.join(" ")}</p>}
-              </div>
+              <details className="text-[0.86rem]" data-testid="analysis-more">
+                <summary className="cursor-pointer text-[0.8rem] text-text-3">{ai ? "AI analysis — view more" : "Analysis — view more"}</summary>
+                <div className="mt-2 grid gap-3 border-t border-line pt-3">
+                  {expl.key_points.length > 0 && <ul className="grid list-disc gap-1 pl-5 text-text-2">{expl.key_points.map((k, i) => <li key={i}>{k}</li>)}</ul>}
+                  {expl.next_scenarios.length > 0 && onAsk && <div className="flex flex-wrap gap-1.5">{expl.next_scenarios.map((q) => <button key={q} className="chip interactive cursor-pointer" onClick={() => onAsk(q)}>{q}</button>)}</div>}
+                  {expl.caveats.length > 0 && <p className="text-[0.8rem] text-text-3">Depends on: {expl.caveats.join(" ")}</p>}
+                </div>
+              </details>
             )}
             {expl.notice && <p className="text-[0.78rem] text-text-3">{expl.notice}</p>}
             {explaining && <span className="inline-flex items-center gap-2 text-[0.8rem] text-text-3"><Spinner />The charts and figures above are final; the AI is only writing the explanation.</span>}

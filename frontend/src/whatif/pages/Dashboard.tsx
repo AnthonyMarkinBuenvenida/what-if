@@ -10,13 +10,15 @@ import { ago, compact, money, pct } from "../format";
 import type { AIStatus, Finding, HistoryRow, IndustryInfo, Metrics, ScenarioSummary, Severity, Signal } from "../types";
 import { SignalStatus } from "../ExternalData";
 import { DemoButton, KindTag, Kpi, NeedsProfile, PageTitle, Section, SeverityBadge, useProfile } from "../ui";
+import { Change, RTable } from "../RTable";
 
+interface Insight { scenario_id: number; scenario: string; mode: string; summary: string; verdict?: string | null; verdict_key?: string | null; change?: number | null; created_at: string }
 interface Dash {
   business: { id: number; name: string; is_demo: boolean }; profile_version: number; profile_updated_at: string; industry: IndustryInfo;
   currency: string; unit_label: string; default_share: number; history: HistoryRow[];
   baseline: { months: { month: string; revenue: number; net_profit: number; cash: number; units: number }[]; totals: Record<string, number>; metrics: Metrics; monthly_avg: Record<string, number> };
   risk: { score: number; level: Severity; counts: Record<Severity, number>; findings: Finding[] };
-  scenarios: ScenarioSummary[]; insights: { scenario_id: number; scenario: string; mode: string; summary: string; created_at: string }[];
+  scenarios: ScenarioSummary[]; insights: Insight[];
   signals: Record<string, Signal>; relevant_signals: string[]; ai: AIStatus; validation: { issues: { severity: string; message: string }[] };
 }
 
@@ -100,14 +102,12 @@ export default function Dashboard() {
       <div className="grid gap-8 lg:grid-cols-2">
         <Section title="Recent insights">
           {data.insights.length === 0 ? <p className="text-text-2">Explanations of saved scenarios appear here.</p> : (
-            <ul className="grid gap-2">
-              {data.insights.map((i) => (
-                <li key={i.scenario_id} className="panel grid gap-1.5 p-3">
-                  <div className="flex items-center justify-between gap-2"><span className="text-[0.85rem] font-semibold">{i.scenario}</span><KindTag kind={i.mode === "ai" ? "ai" : "rules"} /></div>
-                  <p className="text-[0.86rem] text-text-2">{i.summary}</p>
-                </li>
-              ))}
-            </ul>
+            <RTable<Insight> label="Recent insights" testid="insights-table" rows={data.insights} rowKey={(i) => i.scenario_id} cols={[
+              { key: "s", label: "Scenario", render: (i) => <Link to={`/app/simulate?scenario=${i.scenario_id}`} className="font-medium underline">{i.scenario}</Link> },
+              { key: "v", label: "Result", className: "text-text-2", render: (i) => <span title={i.summary}>{i.verdict ?? i.summary}</span> },
+              { key: "c", label: "Net profit change", num: true, render: (i) => <Change v={i.change} fmt={(v) => compact(v, cur)} /> },
+              { key: "k", label: "Written by", render: (i) => <KindTag kind={i.mode === "ai" ? "ai" : "rules"} /> },
+            ]} />
           )}
         </Section>
         <Section title="Data connections" aside={<button className="btn btn-sm btn-outline" onClick={refresh} disabled={refreshing}>{refreshing && <Spinner />}Refresh signals</button>}>

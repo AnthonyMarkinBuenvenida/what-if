@@ -10,16 +10,18 @@ import { ProjectionChart, RankBars } from "../charts";
 import { ago, compact, money, num, pct } from "../format";
 import type { ScenarioSummary, Severity } from "../types";
 import { KindTag, NeedsProfile, PageTitle, Section, SeverityBadge, useProfile } from "../ui";
+import { RTable } from "../RTable";
 
 interface Row {
   id: number | null; name: string; is_baseline: boolean; rank: number; values: Record<string, number | null>; best: number; worst: number;
   risk_score: number; risk_level: Severity; top_risks: { severity: Severity; title: string }[]; confidence: string;
   assumptions: { label: string; value: number | null; unit: string; source: string; note: string }[]; monthly_net_profit: number[]; months: string[];
 }
+interface Note { scenario: string; strength: string; weakness: string }
 interface Table {
   objective: string; objective_label: string; horizon_months: number; start_month: string; currency: string; ranking_note: string; robust: boolean | null; method: string;
   metrics: { key: string; label: string; format: "money" | "pct" | "num" }[]; rows: Row[];
-  commentary: { mode: string; summary: string; trade_offs: string[]; caveats: string[]; notice: string | null; model?: string };
+  commentary: { mode: string; summary: string; trade_offs: string[]; caveats: string[]; notice: string | null; model?: string; scenario_notes?: Note[] };
 }
 const OBJECTIVES: Record<string, string> = {
   max_profit: "Highest net profit", protect_cash: "Protect cash flow (highest lowest-cash point)", max_revenue: "Highest revenue", lowest_risk: "Lowest risk score", best_margin: "Highest net margin",
@@ -91,15 +93,15 @@ export default function Compare() {
           <p className="text-text-2">Save at least one scenario in <Link to="/app/simulate" className="underline">Simulate</Link> to compare it with the current course.</p>
         ) : (
           <>
-            <fieldset className="grid gap-2">
+            <fieldset className="grid min-w-0 gap-2">
               <legend className="label mb-1">Scenarios</legend>
               <label className="flex items-center gap-2 text-[0.9rem]"><input type="checkbox" checked={baseline} onChange={(e) => setBaseline(e.target.checked)} />Current course (no changes)</label>
-              <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-[minmax(0,1fr)] gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
                 {scenarios.map((s) => (
                   <label key={s.id} className="flex items-center justify-between gap-2 rounded-[var(--r-control)] border border-line px-3 py-2 text-[0.88rem]">
                     <span className="flex min-w-0 items-center gap-2"><input type="checkbox" checked={sel.includes(s.id)} onChange={(e) => setSel(e.target.checked ? [...sel, s.id] : sel.filter((x) => x !== s.id))} disabled={!sel.includes(s.id) && sel.length >= 8} /><span className="truncate">{s.name}</span></span>
-                    <span className="flex items-center gap-1">
-                      <span className="text-[0.74rem] text-text-3">{ago(s.created_at)}</span>
+                    <span className="flex shrink-0 items-center gap-1">
+                      <span className="whitespace-nowrap text-[0.74rem] text-text-3">{ago(s.created_at)}</span>
                       <button className="btn btn-quiet btn-sm !min-h-[1.6rem] !px-1.5" aria-label={`Delete ${s.name}`} onClick={async (e) => { e.preventDefault(); if (confirm(`Delete “${s.name}”?`)) { await api.del(`/api/whatif/scenarios/${s.id}`); setSel(sel.filter((x) => x !== s.id)); list.reload(); } }}><IconTrash size={14} /></button>
                     </span>
                   </label>
@@ -178,7 +180,17 @@ export default function Compare() {
           <Section title="Trade-offs" aside={<KindTag kind={table.commentary.mode === "ai" ? "ai" : "rules"} />}>
             <div className="panel grid gap-2 p-4 text-[0.9rem]">
               <p>{table.commentary.summary}</p>
-              {table.commentary.trade_offs.length > 0 && <ul className="list-disc pl-5 text-text-2">{table.commentary.trade_offs.map((t, i) => <li key={i}>{t}</li>)}</ul>}
+              {table.commentary.scenario_notes?.length ? (
+                <RTable<Note> label="Strengths and weaknesses by scenario" testid="scenario-notes" rows={table.commentary.scenario_notes} rowKey={(n, i) => `${i}-${n.scenario}`} cols={[
+                  { key: "s", label: "Scenario", render: (n) => <span className="font-medium">{n.scenario}</span> },
+                  { key: "g", label: "Main strength", className: "text-text-2", render: (n) => <span><span aria-hidden="true" className="text-[var(--sev-low)]">▲ </span>{n.strength}</span> },
+                  { key: "w", label: "Main weakness", className: "text-text-2", render: (n) => <span><span aria-hidden="true" className="text-[var(--sev-high)]">▼ </span>{n.weakness}</span> },
+                ]} />
+              ) : table.commentary.trade_offs.length > 0 && <ul className="list-disc pl-5 text-text-2">{table.commentary.trade_offs.map((t, i) => <li key={i}>{t}</li>)}</ul>}
+              {!!table.commentary.scenario_notes?.length && table.commentary.trade_offs.length > 0 && (
+                <details className="text-[0.84rem] text-text-2"><summary className="cursor-pointer text-[0.8rem] text-text-3">Trade-offs in detail</summary>
+                  <ul className="mt-2 list-disc pl-5">{table.commentary.trade_offs.map((t, i) => <li key={i}>{t}</li>)}</ul></details>
+              )}
               {table.commentary.caveats.length > 0 && <p className="text-[0.8rem] text-text-3">{table.commentary.caveats.join(" ")}</p>}
               {table.commentary.notice && <p className="text-[0.78rem] text-text-3">{table.commentary.notice}</p>}
             </div>

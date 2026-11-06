@@ -1,4 +1,5 @@
-// Risk Radar assessment: what the detected risks mean, what to consider, what to avoid, and scenarios to test.
+// Risk Radar assessment, table first: a short summary, then risk findings, recommended actions and actions to avoid as
+// tables, one next-step sentence, details behind expandable sections, and scenarios to test.
 // Severity and every figure come from the Risk Radar and the engine (backend/app/whatif/advisor.py); the AI only
 // writes the text, and is replaced by the rules when it is unavailable. Suggested scenarios are never run
 // automatically: the owner reviews the values, may change them, and runs the simulation here or in the simulator.
@@ -8,13 +9,16 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { ErrorBox, Notice, Spinner } from "../components/ui";
 import { ago, describeLevers, LEVER_LABELS, money, withUnit } from "./format";
-import type { Levers, RiskAssessment as Assessment, RiskReport, Severity, SimResult } from "./types";
-import { KindTag, SeverityBadge, SevShape, sevLabel } from "./ui";
+import type { AssessmentItem, Levers, RiskAssessment as Assessment, RiskReport, Severity, SimResult } from "./types";
+import { RTable, Txt } from "./RTable";
+import { KindTag, SeverityBadge, sevLabel } from "./ui";
 import { mergeProposal, splitByTiming } from "./assessment";
 
 export interface AssessTarget { scope: string; findingId: string | null; title?: string }
 interface Got { assessment: Assessment | null; current: boolean; cached?: boolean; ai?: { configured: boolean; model: string | null } }
 interface ScopeOption { value: string; label: string; levers: Levers }
+type Detected = Assessment["detected"][number];
+const TIMING = { immediate: "Now", next: "Next", ongoing: "Ongoing" } as const;
 
 /** Numeric levers that can be edited inline; anything else is reviewed in the simulator. */
 const EDITABLE = ["price_change_pct", "unit_cost_change_pct", "demand_change_pct", "marketing_change_pct", "wage_change_pct", "rent_change_pct",
@@ -87,6 +91,11 @@ function AssessmentView({ a, current, cached, cur, businessId, scopeLevers, hori
   const titles = Object.fromEntries(a.detected.map((d) => [d.finding_id, d.title]));
   const rulesFilled = (k: string) => a.filled_from_rules.includes(k);
   const { now, later } = splitByTiming(a.level, a.recommended);
+  const recs = [...now, ...later];
+  const shown = a.detected.slice(0, a.focus ? 1 : 6);
+  // One sentence, built from the first suggested scenario or action (no extra AI call).
+  const nextStep = a.scenarios[0] ? `Run “${a.scenarios[0].title}” below and compare it with ${a.scope.kind === "scenario" ? "this scenario" : "your current figures"} before changing anything.`
+    : recs[0] ? `Start with: ${recs[0].action.replace(/\.$/, "")}.` : null;
   return (
     <div className="grid gap-5">
       <div className="flex flex-wrap items-center gap-2 text-[0.8rem] text-text-3">
@@ -101,48 +110,76 @@ function AssessmentView({ a, current, cached, cur, businessId, scopeLevers, hori
       )}
       {a.notice && <Notice><span>{a.notice}</span></Notice>}
 
-      <Block title={a.labels.overview} rules={rulesFilled("overview")}>
-        <p>{a.overview}</p>
+      <Block title={a.labels.overview === "Risk overview" ? "Summary" : a.labels.overview} rules={rulesFilled("overview")}>
+        <p data-testid="assess-summary">{a.overview}</p>
         {a.priority && <p><b className="text-text">Priority:</b> {a.priority}</p>}
-        {a.relationships && <p><b className="text-text">How these warnings relate:</b> {a.relationships}</p>}
       </Block>
 
-      <Block title="Why this risk was detected">
+      <Block title="Risk findings">
         {a.detected.length === 0 ? <p>No Risk Radar rule crosses its threshold for these figures.</p> : (
-          <ul className="grid gap-2">
-            {a.detected.slice(0, a.focus ? 1 : 6).map((d) => (
-              <li key={d.finding_id} className="grid gap-0.5">
-                <span className="flex flex-wrap items-center gap-2"><span className={`inline-flex items-center gap-1 sev-${d.severity} !bg-transparent`} style={{ border: 0 }}><SevShape s={d.severity} />{sevLabel(d.severity)}</span><b className="text-text">{d.title}</b>
-                  <KindTag kind={d.data_kind === "actual" ? "actual" : d.data_kind === "forecast" ? "forecast" : d.data_kind === "historical" ? "historical" : "calculated"} /></span>
-                <span className="num">{d.metric.label}: {withUnit(d.metric.value, d.metric.unit, cur)}{d.metric.threshold != null && <> · warning threshold {withUnit(d.metric.threshold, d.metric.unit, cur)}</>}</span>
-                <span className="text-[0.8rem] text-text-3">Rule: {d.rule_thresholds}</span>
-              </li>
-            ))}
-            {!a.focus && a.detected.length > 6 && <li className="text-[0.8rem] text-text-3">…and {a.detected.length - 6} more in the warning list below.</li>}
-          </ul>
+          <>
+            <RTable<Detected> label="Risk findings" testid="assess-findings" rows={shown} rowKey={(d) => d.finding_id} cols={[
+              { key: "r", label: "Risk", render: (d) => <span className="font-medium text-text">{d.title}</span> },
+              { key: "s", label: "Severity", render: (d) => <SeverityBadge s={d.severity} /> },
+              { key: "e", label: "Evidence", render: (d) => (
+                <span className="num">{d.metric.label}: {withUnit(d.metric.value, d.metric.unit, cur)}{d.metric.threshold != null && <span className="text-text-3"> (threshold {withUnit(d.metric.threshold, d.metric.unit, cur)})</span>}</span>) },
+              { key: "i", label: "Potential impact", render: (d) => <Txt v={d.if_no_action ?? (d.impact ? `${d.impact.label}: ${withUnit(d.impact.value, d.impact.unit, cur)} ${d.impact.period}` : null)} /> },
+            ]} />
+            {!a.focus && a.detected.length > 6 && <p className="text-[0.8rem] text-text-3">…and {a.detected.length - 6} more in the warning list below.</p>}
+            <details className="text-[0.84rem]" data-testid="risk-evidence">
+              <summary className="cursor-pointer text-[0.8rem] text-text-3">Risk evidence: rules, thresholds and data used</summary>
+              <ul className="mt-2 grid gap-2.5">
+                {shown.map((d) => (
+                  <li key={d.finding_id} className="grid gap-0.5">
+                    <span className="flex flex-wrap items-center gap-2"><b className="text-text">{d.title}</b>
+                      <KindTag kind={d.data_kind === "actual" ? "actual" : d.data_kind === "forecast" ? "forecast" : d.data_kind === "historical" ? "historical" : "calculated"} /></span>
+                    <span className="text-[0.8rem] text-text-3">Rule: {d.rule_thresholds}</span>
+                    {!!d.evidence?.length && <span className="num text-[0.8rem]">{d.evidence.map((e) => `${e.label}: ${typeof e.value === "number" ? withUnit(e.value, e.unit, cur) : e.value ?? "N/A"}`).join(" · ")}</span>}
+                  </li>
+                ))}
+              </ul>
+              {a.relationships && <p className="mt-2"><b className="text-text">How these warnings relate:</b> {a.relationships}</p>}
+            </details>
+          </>
         )}
       </Block>
 
-      <div className="grid gap-5 md:grid-cols-2">
-        <Block title={a.labels.recommended} rules={rulesFilled("recommended")} tone="good">
-          <Items items={now} titles={titles} prefix="Recommended" />
-          {later.length > 0 && <><h4 className="mt-2 text-[0.8rem] font-semibold text-text-3">{a.labels.next}</h4><Items items={later} titles={titles} prefix="Next" /></>}
-        </Block>
-        <Block title={a.labels.avoid} rules={rulesFilled("not_recommended")} tone="bad">
-          {a.not_recommended.length === 0 ? <p>{a.not_recommended_none ?? "No action is clearly inadvisable from the available figures."}</p> :
-            <Items items={a.not_recommended} titles={titles} prefix="Not recommended" />}
-        </Block>
-      </div>
+      <Block title={a.labels.recommended} rules={rulesFilled("recommended")} tone="good">
+        <RTable<AssessmentItem> label="Recommended actions" testid="assess-recommended" rows={recs} rowKey={(x, i) => i + x.action} empty="No action is needed for these figures." cols={[
+          { key: "p", label: "Priority", render: (x, i) => <span className="whitespace-nowrap"><b className="num text-text">{i + 1}</b>{x.timing && <span className="ml-1.5 text-[0.76rem] text-text-3">{TIMING[x.timing]}</span>}</span> },
+          { key: "a", label: "Recommended action", render: (x) => <span><span className="sr-only">Recommended: </span><b className="text-text">{x.action}</b>{x.finding_ids.length > 0 && <span className="block text-[0.76rem] text-text-3">For: {x.finding_ids.map((id) => titles[id] ?? id).join("; ")}</span>}</span> },
+          { key: "r", label: "Reason", render: (x) => <Txt v={x.reason} /> },
+          { key: "b", label: "Expected benefit", render: (x) => <Txt v={x.expected_benefit} /> },
+        ]} />
+      </Block>
 
-      <div className="grid gap-5 md:grid-cols-2">
-        <Block title={a.labels.impact}>
-          <p><b className="text-text">If you test or follow the suggestions:</b> {a.expected_impact.if_followed}</p>
-          <p><b className="text-text">If nothing changes:</b> {a.expected_impact.if_ignored}</p>
-        </Block>
-        <Block title={a.labels.monitor} rules={rulesFilled("monitor")}>
-          <ul className="grid gap-1.5">{a.monitor.map((m, i) => <li key={i}><b className="text-text">{m.indicator}</b> <span>— {m.why}</span></li>)}</ul>
-        </Block>
-      </div>
+      <Block title={a.labels.avoid} rules={rulesFilled("not_recommended")} tone="bad">
+        {a.not_recommended.length === 0 ? <p>{a.not_recommended_none ?? "No action is clearly inadvisable from the available figures."}</p> : (
+          <RTable<AssessmentItem> label="Not recommended" testid="assess-avoid" rows={a.not_recommended} rowKey={(x, i) => i + x.action} cols={[
+            { key: "a", label: "Action to avoid", render: (x) => <span><span className="sr-only">Not recommended: </span><b className="text-text">{x.action}</b></span> },
+            { key: "w", label: "Why", render: (x) => <Txt v={x.reason} /> },
+            { key: "c", label: "Possible consequence", render: (x) => <Txt v={x.consequence} /> },
+          ]} />
+        )}
+      </Block>
+
+      {nextStep && <p className="text-[0.88rem]" data-testid="assess-next"><b>Next step:</b> <span className="text-text-2">{nextStep}</span></p>}
+
+      <details className="text-[0.88rem] text-text-2" data-testid="assess-more">
+        <summary className="cursor-pointer text-[0.82rem] text-text-3">{a.labels.impact}, {a.labels.monitor.toLowerCase()}{a.verify.length ? `, ${a.labels.verify.toLowerCase()}` : ""}{a.limitations.length ? " and limitations" : ""}</summary>
+        <div className="mt-3 grid gap-5 md:grid-cols-2">
+          <Block title={a.labels.impact}>
+            <RTable<{ k: string; t: string }> label={a.labels.impact} rows={[{ k: "If you test or follow the suggestions", t: a.expected_impact.if_followed }, { k: "If nothing changes", t: a.expected_impact.if_ignored }]} rowKey={(x) => x.k} cols={[
+              { key: "k", label: "Case", render: (x) => <b className="text-text">{x.k}</b> }, { key: "t", label: "Expected effect", render: (x) => <Txt v={x.t} /> }]} />
+          </Block>
+          <Block title={a.labels.monitor} rules={rulesFilled("monitor")}>
+            <RTable<Assessment["monitor"][number]> label={a.labels.monitor} rows={a.monitor} rowKey={(x, i) => i + x.indicator} empty="Nothing specific to monitor." cols={[
+              { key: "i", label: "Indicator", render: (x) => <b className="text-text">{x.indicator}</b> }, { key: "w", label: "Why", render: (x) => <Txt v={x.why} /> }]} />
+          </Block>
+          {a.verify.length > 0 && <Block title={a.labels.verify}><ul className="grid gap-1 pl-4 [list-style:disc]">{a.verify.map((v, i) => <li key={i}>{v}</li>)}</ul></Block>}
+          {a.limitations.length > 0 && <Block title="Limitations"><ul className="grid gap-1 pl-4 [list-style:disc]">{a.limitations.map((v, i) => <li key={i}>{v}</li>)}</ul></Block>}
+        </div>
+      </details>
 
       <Block title="Test this scenario" rules={rulesFilled("scenarios")}>
         <p className="text-[0.8rem] text-text-3">Proposed values only. Nothing runs or changes until you choose; your business figures stay as they are.</p>
@@ -150,13 +187,6 @@ function AssessmentView({ a, current, cached, cur, businessId, scopeLevers, hori
           {a.scenarios.map((s, i) => <ScenarioTest key={`${a.created_at}-${i}`} s={s} titles={titles} cur={cur} businessId={businessId} scopeLevers={scopeLevers} horizon={horizon} scopeName={a.scope.name} isScenario={a.scope.kind === "scenario"} />)}
         </div>
       </Block>
-
-      {(a.verify.length > 0 || a.limitations.length > 0) && (
-        <div className="grid gap-5 md:grid-cols-2">
-          {a.verify.length > 0 && <Block title={a.labels.verify}><ul className="grid gap-1 pl-4 [list-style:disc]">{a.verify.map((v, i) => <li key={i}>{v}</li>)}</ul></Block>}
-          {a.limitations.length > 0 && <Block title="Limitations"><ul className="grid gap-1 pl-4 [list-style:disc]">{a.limitations.map((v, i) => <li key={i}>{v}</li>)}</ul></Block>}
-        </div>
-      )}
       <p className="text-[0.78rem] text-text-3">{a.disclaimer}</p>
     </div>
   );
@@ -166,25 +196,11 @@ function Block({ title, children, rules = false, tone }: { title: string; childr
   return (
     <section className="grid content-start gap-2 text-[0.88rem] text-text-2">
       <h3 className="flex items-center gap-2 text-[0.82rem] font-semibold uppercase tracking-[0.06em] text-text-3">
-        {tone && <span aria-hidden="true" className={tone === "good" ? "text-[var(--accent)]" : "text-[var(--sev-high)]"}>{tone === "good" ? "✓" : "✕"}</span>}
+        {tone && <span aria-hidden="true" className={tone === "good" ? "text-[var(--sev-low)]" : "text-[var(--sev-high)]"}>{tone === "good" ? "✓" : "✕"}</span>}
         {title}{rules && <KindTag kind="rules" title="This section was written from the Risk Radar rules" />}
       </h3>
       {children}
     </section>
-  );
-}
-
-function Items({ items, titles, prefix }: { items: { action: string; reason: string; finding_ids: string[] }[]; titles: Record<string, string>; prefix: string }) {
-  return (
-    <ol className="grid gap-2.5">
-      {items.map((r, i) => (
-        <li key={i} className="grid gap-0.5">
-          <span><span className="sr-only">{prefix}: </span><b className="text-text">{i + 1}. {r.action}</b></span>
-          <span>Reason: {r.reason}</span>
-          {r.finding_ids.length > 0 && <span className="text-[0.78rem] text-text-3">Related warning: {r.finding_ids.map((id) => titles[id] ?? id).join("; ")}</span>}
-        </li>
-      ))}
-    </ol>
   );
 }
 

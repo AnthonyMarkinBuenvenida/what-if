@@ -53,8 +53,26 @@ class AIRiskNote(BaseModel):
 
 
 class AIRecommendation(BaseModel):
-    text: str
+    text: str = Field(description="The action, short (e.g. 'Test a 5% price increase')")
+    reason: str | None = Field(None, description="Why, tied to a figure in the facts; one short sentence")
     try_question: str | None = Field(None, description="A 'What if ...' question the user could simulate next")
+
+
+class AIFinding(BaseModel):
+    metric: Literal["revenue", "costs", "profitability", "break_even"]
+    explanation: str = Field(description="One short sentence: why this metric changed (or where it stands), from the facts")
+
+
+class AIAvoidItem(BaseModel):
+    action: str
+    reason: str = Field(description="Why it is inadvisable here, tied to the facts")
+    consequence: str | None = Field(None, description="What could happen if done anyway; qualified, no invented figures")
+
+
+class AIScenarioNote(BaseModel):
+    scenario: str = Field(description="Scenario name exactly as in the facts")
+    strength: str
+    weakness: str
 
 
 CHARTS = ("comparison", "trend", "expenses", "break_even", "impact", "range", "risks")
@@ -68,10 +86,11 @@ class AIChartNote(BaseModel):
 class AIExplanation(BaseModel):
     summary: str = Field(description="2-4 sentences: what changes, why, and whether it appears worthwhile under the assumptions")
     key_points: list[str] = Field(description="Up to 5 short points, each tied to a calculated figure")
+    findings: list[AIFinding] = Field(default_factory=list, description="One row each for revenue, costs, profitability and break_even")
     chart_notes: list[AIChartNote] = Field(default_factory=list, description="One short note per chart in `charts`")
     risk_notes: list[AIRiskNote] = Field(default_factory=list)
     recommendations: list[AIRecommendation] = Field(default_factory=list)
-    not_recommended: list[str] = Field(default_factory=list, description="Up to 3 specific actions to avoid here, each with its reason")
+    not_recommended: list[AIAvoidItem] = Field(default_factory=list, description="Up to 3 specific actions to avoid here")
     next_step: str | None = Field(None, description="The single most useful next simulation to run, as a short instruction")
     next_scenarios: list[str] = Field(default_factory=list, description="Up to 4 'What if ...' questions worth testing")
     caveats: list[str] = Field(default_factory=list, description="Assumptions or missing information that matter most")
@@ -81,6 +100,7 @@ class AIComparison(BaseModel):
     summary: str
     trade_offs: list[str]
     caveats: list[str] = Field(default_factory=list)
+    scenario_notes: list[AIScenarioNote] = Field(default_factory=list, description="One row per compared scenario: its main strength and weakness")
 
 
 class AIReport(BaseModel):
@@ -265,6 +285,51 @@ def chart_data(sim: dict) -> dict:
     }
 
 
+def findings_table(sim: dict, cur: str, unit_label: str) -> list[dict]:
+    """Rows for the "AI analysis" table. Figures and the impact label come from the calculation; the explanation here is
+    rule-written and may be replaced by a checked AI sentence."""
+    s, b = sim["scenario"], sim["baseline"]
+    st, bt, sm, bm = s["totals"], b["totals"], s["metrics"], b["metrics"]
+    exp = lambda t: (t.get("variable_costs") or 0) + (t.get("operating_expenses") or 0) + (t.get("tax") or 0)  # noqa: E731
+    same = lambda a, c: abs(c - a) <= max(1.0, abs(a) * 0.005)  # noqa: E731
+    rows = []
+    # Revenue: units and average price per unit
+    u0, u1 = bt["units"] or 0, st["units"] or 0
+    p0, p1 = (bt["revenue"] / u0 if u0 else None), (st["revenue"] / u1 if u1 else None)
+    rows.append({"key": "revenue", "label": "Revenue", "current": bt["revenue"], "simulated": st["revenue"], "unit": cur,
+                 "impact": "neutral" if same(bt["revenue"], st["revenue"]) else "positive" if st["revenue"] > bt["revenue"] else "negative",
+                 "explanation": (f"Units sold {_fmt(u0)} → {_fmt(u1)}; average price per unit "
+                                 f"{('%.2f' % p0) if p0 is not None else 'n/a'} → {('%.2f' % p1) if p1 is not None else 'n/a'} {cur}.")})
+    # Costs: the category that moved most
+    deltas = sorted(((label, (st.get(k) or 0) - (bt.get(k) or 0)) for k, label in EXPENSES), key=lambda x: -abs(x[1]))
+    top = deltas[0] if deltas and abs(deltas[0][1]) >= 1 else None
+    rows.append({"key": "costs", "label": "Operating costs and expenses", "current": exp(bt), "simulated": exp(st), "unit": cur,
+                 "impact": "neutral" if same(exp(bt), exp(st)) else "negative" if exp(st) > exp(bt) else "positive",
+                 "explanation": (f"Largest change: {top[0].lower()} {'+' if top[1] >= 0 else '−'}{_fmt(abs(top[1]))} {cur}." if top
+                                 else "No expense category changes.")})
+    # Profitability: margin and the biggest driver
+    drv = max(sim["bridge"], key=lambda x: abs(x["value"])) if sim["bridge"] else None
+    rows.append({"key": "profitability", "label": "Net profit", "current": bt["net_profit"], "simulated": st["net_profit"], "unit": cur,
+                 "impact": "neutral" if same(bt["net_profit"], st["net_profit"]) else "positive" if st["net_profit"] > bt["net_profit"] else "negative",
+                 "explanation": (f"Net margin {_pctf(bm['net_margin'])} → {_pctf(sm['net_margin'])}"
+                                 + (f"; biggest driver: {drv['label'].lower()} {'+' if drv['value'] >= 0 else '−'}{_fmt(abs(drv['value']))} {cur}." if drv and not sim.get("is_baseline") else "."))})
+    # Break-even position (not a change: where the scenario stands)
+    be, units = sm["break_even_units"], s["monthly_avg"]["units"]
+    if be is None:
+        status, text = "at_risk", "No break-even point: on average each unit sells for less than its variable cost."
+    else:
+        gap = (units - be) / be if be else 0
+        status = "at_risk" if gap < 0.10 else "stable"
+        text = f"Selling {_fmt(units)} {unit_label} a month against a break-even of {_fmt(be)} ({'+' if gap >= 0 else '−'}{abs(gap) * 100:.1f}%)."
+    rows.append({"key": "break_even", "label": f"Break-even ({unit_label}/month)", "current": bm["break_even_units"], "simulated": be, "unit": unit_label,
+                 "impact": status, "explanation": text})
+    return rows
+
+
+def _pctf(v) -> str:
+    return "n/a" if v is None else f"{v * 100:.1f}%"
+
+
 def chart_notes(sim: dict, risks: dict, cur: str, unit_label: str) -> dict:
     """One short note per chart, written from the calculation by fixed rules (no AI)."""
     s, b = sim["scenario"], sim["baseline"]
@@ -339,17 +404,19 @@ def calculation_explanation(sim: dict, risks: dict, cur: str, unit_label: str) -
     for f in risks.get("findings", [])[:3]:
         for act in f.get("actions", [])[:1]:
             if act.get("levers"):
-                recs.append({"text": f"{f['title']}: {act['label'].lower()}.", "try_question": None, "levers": act["levers"]})
+                recs.append({"text": act["label"], "reason": f"{f['title']}. {f['why']}", "try_question": None, "levers": act["levers"]})
     caveats = [x["text"] for x in sim["confidence"]["reasons"][:3]]
     from .advisor import AVOID  # rule-based "not recommended" items (the same ones Risk Radar uses)
     avoid, seen = [], set()
     for f in risks.get("findings", []):
         if f["rule"] in AVOID and f["rule"] not in seen and len(avoid) < 3:
             seen.add(f["rule"])
-            avoid.append(f"{AVOID[f['rule']][0]}: {AVOID[f['rule']][1]}")
+            act, why, then = AVOID[f["rule"]]
+            avoid.append({"action": act, "reason": why, "consequence": then})
     return {"mode": "calculation", "model": None, "assessment": a, "required_volume": rv, "summary": summary,
-            "key_points": pts[:5], "chart_notes": chart_notes(sim, risks, cur, unit_label), "risk_notes": [], "recommendations": recs,
-            "not_recommended": avoid, "next_step": recs[0]["text"] if recs else None, "next_scenarios": [], "caveats": caveats, "dropped": 0,
+            "key_points": pts[:5], "findings": findings_table(sim, cur, unit_label), "findings_ai": [],
+            "chart_notes": chart_notes(sim, risks, cur, unit_label), "risk_notes": [], "recommendations": recs,
+            "not_recommended": avoid, "next_step": (f"{recs[0]['text']} in the simulator and compare it with this result." if recs else None), "next_scenarios": [], "caveats": caveats, "dropped": 0,
             "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
             "notice": None if llm.available else "AI is not connected. This explanation was written from the calculation by fixed rules."}
 
@@ -366,7 +433,12 @@ Rules:
 - chart_notes: one note per chart in `charts` (comparison, trend, expenses, break_even, impact, range, risks). Say what the chart
   shows for this scenario using only that chart's figures; name the biggest change. 1-2 sentences each.
 - Never call a scenario profitable or better when the figures show a loss or a decline; calculated months are projections, not actual results.
-- not_recommended: specific actions with an identifiable downside here, each with its reason; empty if none is supported.
+- findings: one row each for revenue, costs, profitability and break_even; each explanation is one short sentence saying WHY
+  (the figures and the positive/negative label are shown from the calculation, so do not restate the numbers at length).
+- summary: 2-3 sentences, the overall conclusion only.
+- recommendations: text = the action (short), reason = why, from the facts. Up to 3, most important first.
+- not_recommended: action, reason and possible consequence for each; only actions with an identifiable downside here; empty
+  if none is supported. Never invent losses, deadlines or probabilities in the consequence.
 - Recommendations are suggestions to test, never guarantees: use "Consider ...", "Test ...".
 - Write numbers as the app shows them: money rounded to whole units with thousands separators (e.g. 4,621,395 PHP),
   percentages and shares to one decimal (e.g. 48.2%), units to whole numbers. Fractions such as 0.0076 are percentages (0.8%)."""
@@ -421,10 +493,22 @@ def explain(sim: dict, risks: dict, profile: Profile) -> dict:
             dropped += 1
     recs = []
     for r in out.recommendations[:5]:
-        if ungrounded_numbers(r.text, facts) or OVERCLAIM.search(r.text):
+        if any(t and (ungrounded_numbers(t, facts) or OVERCLAIM.search(t)) for t in (r.text, r.reason)):
             dropped += 1
             continue
         recs.append(r.model_dump())
+    # Findings table: rule rows (figures + impact from the calculation); a checked AI sentence replaces the explanation.
+    rows = [dict(x) for x in base["findings"]]
+    ai_rows = []
+    for fnd in out.findings:
+        row = next((x for x in rows if x["key"] == fnd.metric), None)
+        if row is None:
+            continue
+        if ungrounded_numbers(fnd.explanation, facts) or OVERCLAIM.search(fnd.explanation):
+            dropped += 1
+            continue
+        row["explanation"] = fnd.explanation
+        ai_rows.append(fnd.metric)
     # Per-chart notes: grounded and plain, one per chart; a chart without a usable AI note keeps the rule-based one.
     cnotes = dict(base["chart_notes"])
     ai_charts = []
@@ -435,12 +519,17 @@ def explain(sim: dict, risks: dict, profile: Profile) -> dict:
                 continue
             cnotes[n.chart] = n.note
             ai_charts.append(n.chart)
-    avoid, d4 = _grounded(plain(out.not_recommended[:3]), facts)
+    avoid, d4 = [], 0
+    for a in out.not_recommended[:3]:
+        if any(t and (ungrounded_numbers(t, facts) or OVERCLAIM.search(t)) for t in (a.action, a.reason, a.consequence)):
+            d4 += 1
+            continue
+        avoid.append(a.model_dump())
     nxt = out.next_step if out.next_step and not ungrounded_numbers(out.next_step, facts) and not OVERCLAIM.search(out.next_step) else base["next_step"]
     dropped += d4 + over
     return {"mode": "ai", "model": llm.last_model or llm.model, "provider": llm.provider, "assessment": base["assessment"], "required_volume": base["required_volume"],
             "summary": summary[0] if summary else base["summary"], "key_points": points or base["key_points"], "risk_notes": notes,
-            "chart_notes": cnotes, "chart_notes_ai": ai_charts,
+            "findings": rows, "findings_ai": ai_rows, "chart_notes": cnotes, "chart_notes_ai": ai_charts,
             "recommendations": recs, "not_recommended": avoid or base["not_recommended"], "next_step": nxt,
             "next_scenarios": out.next_scenarios[:4], "caveats": caveats or base["caveats"], "dropped": dropped,
             "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(), "context": pack,
@@ -450,7 +539,9 @@ def explain(sim: dict, risks: dict, profile: Profile) -> dict:
 
 COMPARE_SYSTEM = """You compare business scenarios that a deterministic engine has already calculated.
 Use only figures in the facts; never introduce new numbers. Explain the trade-offs for the stated objective.
-Do not call any scenario universally best: say which assumptions the ranking depends on. Plain language, short."""
+Do not call any scenario universally best: say which assumptions the ranking depends on. Plain language, short.
+summary: 2 sentences. scenario_notes: one row per scenario in the facts (use its exact name): its main strength and weakness,
+one short phrase each."""
 
 
 def explain_comparison(table: dict) -> dict:
@@ -465,7 +556,10 @@ def explain_comparison(table: dict) -> dict:
     s, d1 = _grounded([out.summary], facts)
     t, d2 = _grounded(out.trade_offs[:6], facts)
     c, d3 = _grounded(out.caveats[:4], facts)
-    return {"mode": "ai", "model": llm.last_model or llm.model, "summary": s[0] if s else table["ranking_note"], "trade_offs": t, "caveats": c,
+    names = {r["name"] for r in table.get("rows", [])}
+    notes = [n.model_dump() for n in out.scenario_notes[:8]
+             if n.scenario in names and not ungrounded_numbers(n.strength, facts) and not ungrounded_numbers(n.weakness, facts)]
+    return {"mode": "ai", "model": llm.last_model or llm.model, "summary": s[0] if s else table["ranking_note"], "trade_offs": t, "caveats": c, "scenario_notes": notes,
             "notice": f"{d1 + d2 + d3} AI statement(s) were removed because they cited figures not in the comparison." if d1 + d2 + d3 else None}
 
 

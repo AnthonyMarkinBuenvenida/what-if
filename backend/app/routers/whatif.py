@@ -14,7 +14,7 @@ from fastapi.responses import Response
 from typing import Literal
 
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -310,8 +310,11 @@ def get_scenario(scenario_id: int, open: bool = False, ws: Workspace = Depends(c
     """A saved simulation exactly as it was stored (no recalculation). open=true records it as the last one viewed."""
     s, _ = _owned_scenario(db, ws, scenario_id)
     if open:
-        s.opened_at = service.now()
+        # Viewing is not editing: only opened_at changes; updated_at is set to itself so its onupdate does not fire.
+        db.execute(update(WhatIfScenario).where(WhatIfScenario.id == s.id)
+                   .values(opened_at=service.now(), updated_at=WhatIfScenario.updated_at).execution_options(synchronize_session=False))
         db.commit()
+        db.refresh(s)
     return service.scenario_out(s, full=True, profile_row=_profile_row(db, s))
 
 
@@ -693,7 +696,8 @@ def dashboard(business_id: int, ws: Workspace = Depends(current_workspace), db: 
     sim, risks = service.run(profile, Levers(horizon_months=12), sig)
     scen = db.scalars(select(WhatIfScenario).where(WhatIfScenario.business_id == b.id).order_by(WhatIfScenario.created_at.desc()).limit(6)).all()
     insights = [{"scenario_id": s.id, "scenario": s.name, "mode": (s.explanation or {}).get("mode"), "summary": (s.explanation or {}).get("summary"),
-                 "created_at": s.created_at.isoformat()} for s in scen if s.explanation][:4]
+                 "verdict": ((s.explanation or {}).get("assessment") or {}).get("text"), "verdict_key": ((s.explanation or {}).get("assessment") or {}).get("key"),
+                 "change": service.scenario_out(s)["summary"]["change"], "created_at": s.created_at.isoformat()} for s in scen if s.explanation][:4]
     return {
         "business": business_out(db, b), "profile_version": row.version, "profile_updated_at": row.created_at.isoformat(),
         "industry": {"id": profile.industry, **INDUSTRIES[profile.industry]}, "currency": profile.business.currency,

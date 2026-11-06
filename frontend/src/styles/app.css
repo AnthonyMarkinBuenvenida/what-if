@@ -196,6 +196,19 @@
   table.data td.n, table.data th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   table.data tbody tr { transition: background var(--dur-fast) var(--ease-standard); }
   table.data tbody tr:hover { background: var(--surface-2); }
+  /* Responsive analysis tables: on narrow screens each row becomes a card of labelled fields (no tiny text, no cut-off). */
+  @media (max-width: 640px) {
+    .rtable-wrap { overflow: visible; border: 0; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
+    table.rtable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    table.rtable, table.rtable tbody, table.rtable tr, table.rtable td { display: block; width: 100%; }
+    table.rtable tr { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--glass); padding: 0.45rem 0.8rem; margin-bottom: 0.5rem; }
+    table.rtable td, table.rtable td.n { display: flex; justify-content: space-between; align-items: baseline; gap: 0.9rem; padding: 0.3rem 0; border: 0; text-align: right; white-space: normal; }
+    table.rtable td::before { content: attr(data-label); flex: none; max-width: 42%; text-align: left; color: var(--text-3); font-size: 0.76rem; font-weight: 550; }
+    table.rtable td > * { min-width: 0; }
+    /* The first cell names the row, so it is the card's title rather than a labelled field. */
+    table.rtable td:first-child { justify-content: flex-start; text-align: left; font-weight: 600; padding-bottom: 0.4rem; border-bottom: 1px solid var(--line); margin-bottom: 0.15rem; }
+    table.rtable td:first-child::before { display: none; }
+  }
 
   /* Loading */
   .skeleton { position: relative; overflow: hidden; background: var(--surface-2); border-radius: var(--r-card); }

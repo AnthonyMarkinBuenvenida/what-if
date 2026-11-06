@@ -79,8 +79,12 @@ def test_open_restore_rename_duplicate_delete(client):
     a, _ = autosave(client, bid, {"price_change_pct": 5}, name="A")
     b, _ = autosave(client, bid, {"price_change_pct": -5}, name="B")
     # Opening records the last viewed run; "latest" restores it after a restart.
-    client.get(f"/api/whatif/scenarios/{a['id']}?open=true")
+    before = client.get(f"/api/whatif/scenarios/{a['id']}").json()
+    o = client.get(f"/api/whatif/scenarios/{a['id']}?open=true").json()
     assert client.get(f"/api/whatif/businesses/{bid}/scenarios/latest").json()["scenario"]["id"] == a["id"]
+    # Viewing is not an edit: only opened_at moves; updated_at and the stored content stay as they were.
+    assert o["opened_at"] and o["updated_at"] == before["updated_at"]
+    assert o["result"] == before["result"] and o["explanation"] == before["explanation"]
     # Opening restores the stored result without recalculating.
     opened = client.get(f"/api/whatif/scenarios/{a['id']}").json()
     assert opened["result"]["computed_at"] == a["result"]["computed_at"]
@@ -134,11 +138,21 @@ def test_saved_explanation_uses_the_stored_result_and_is_kept(client, monkeypatc
             "chart_notes": [{"chart": "comparison", "note": "Revenue rises slightly but net profit falls."},
                             {"chart": "expenses", "note": "Variable costs are 99,999,999 of spending."},  # invented -> removed
                             {"chart": "range", "note": "This decision will restore profitability."}],  # overclaim -> removed
-            "not_recommended": ["Avoid applying the cut to every product at once."], "next_step": "Test a 5% price reduction."})
+            "findings": [{"metric": "revenue", "explanation": "More cups are sold, but each earns less."},
+                         {"metric": "profitability", "explanation": "Profit falls by 77,777,777 overall."}],  # invented -> removed
+            "not_recommended": [{"action": "Avoid applying the cut to every product at once.", "reason": "Margins are thin.", "consequence": "Profit could fall further."}],
+            "next_step": "Test a 5% price reduction."})
     monkeypatch.setattr(llm, "structured", fake)
     e = client.post(f"/api/whatif/scenarios/{s['id']}/explain", headers=H, json={}).json()
     assert e["mode"] == "ai" and e["chart_notes"]["comparison"] == "Revenue rises slightly but net profit falls."
-    assert "99,999,999" not in json.dumps(e) and "will restore" not in json.dumps(e) and e["dropped"] == 2
+    assert "99,999,999" not in json.dumps(e) and "will restore" not in json.dumps(e) and "77,777,777" not in json.dumps(e) and e["dropped"] == 3
+    rows = {r["key"]: r for r in e["findings"]}
+    assert rows["revenue"]["explanation"] == "More cups are sold, but each earns less." and e["findings_ai"] == ["revenue"]
+    # Figures and the impact label come from the calculation, not the AI.
+    st, bt = s["result"]["scenario"]["totals"], s["result"]["baseline"]["totals"]
+    assert rows["profitability"]["simulated"] == st["net_profit"] and rows["profitability"]["current"] == bt["net_profit"]
+    assert rows["profitability"]["impact"] == ("negative" if st["net_profit"] < bt["net_profit"] else "positive")
+    assert e["not_recommended"][0]["consequence"] == "Profit could fall further."
     assert e["chart_notes"]["expenses"] and e["chart_notes"]["range"]  # kept from the rules
     assert e["not_recommended"] and e["next_step"] == "Test a 5% price reduction." and "context" not in e
     saved = client.get(f"/api/whatif/scenarios/{s['id']}").json()
